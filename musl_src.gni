@@ -1583,6 +1583,7 @@ musl_src_file = [
   "src/unistd/getppid.c",
   "src/unistd/getsid.c",
   "src/unistd/getuid.c",
+  "src/unistd/userid.c",
   "src/unistd/isatty.c",
   "src/unistd/lchown.c",
   "src/unistd/link.c",

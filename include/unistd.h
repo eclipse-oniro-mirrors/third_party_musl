@@ -176,6 +176,8 @@ int setuid(uid_t);
 int seteuid(uid_t);
 int setgid(gid_t);
 int setegid(gid_t);
+int getappuid(void);
+int setappuid(uid_t)；
 
 char *getlogin(void);
 int getlogin_r(char *, size_t);
