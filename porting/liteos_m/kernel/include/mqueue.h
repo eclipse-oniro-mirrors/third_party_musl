@@ -11,9 +11,13 @@ extern "C" {
 #define __NEED_pthread_attr_t
 #define __NEED_time_t
 #define __NEED_struct_timespec
+#define __NEED_uintptr_t
 #include <bits/alltypes.h>
 
-typedef int mqd_t;
+/* LP64-safe descriptor: the liteos_m posix mqueue implementation
+ * stores a `struct mqpersonal *` in mqd_t (fits uintptr_t on all arches;
+ * same 32-bit size/ABI as the historical int). */
+typedef uintptr_t mqd_t;
 struct mq_attr {
 	long mq_flags, mq_maxmsg, mq_msgsize, mq_curmsgs, __unused[4];
 };

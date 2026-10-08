@@ -140,7 +140,9 @@ int pclose(FILE *);
 int fileno(FILE *);
 int fseeko(FILE *, off_t, int);
 off_t ftello(FILE *);
+#ifndef __LITEOS__
 int dprintf(int, const char *__restrict, ...);
+#endif
 int vdprintf(int, const char *__restrict, __isoc_va_list);
 void flockfile(FILE *);
 int ftrylockfile(FILE *);

@@ -46,6 +46,7 @@ typedef struct sigaltstack stack_t;
 #endif
 
 #include <bits/signal.h>
+#include <errno.h>
 
 #if defined(_POSIX_SOURCE) || defined(_POSIX_C_SOURCE) \
  || defined(_XOPEN_SOURCE) || defined(_GNU_SOURCE) \
@@ -203,11 +204,49 @@ int __libc_current_sigrtmax(void);
 
 int kill(pid_t, int);
 
-#define sigaddset(what, sig)   (*(what) |= (1U << (sig)), 0)
-#define sigdelset(what, sig)   (*(what) &= ~(1U << (sig)), 0)
 #define sigemptyset(what)      (*(what) = 0, 0)
 #define sigfillset(what)       (*(what) = ~(0), 0)
-#define sigismember(what, sig) (((*(what)) & (1U << (sig))) != 0)
+
+/*
+ * The liteos_m kernel supports signal numbers 1..31 (LOS_SIGNAL_SUPPORT_MAX)
+ * and stores signal N in bit N-1, the same convention as the kernel's
+ * LOS_SIGNAL_MASK. sigaddset and friends used to be macros; as functions they
+ * reject an invalid sig with -1/EINVAL as POSIX requires, instead of
+ * evaluating a shift with a negative count, which is undefined behavior for
+ * sig <= 0.
+ */
+#ifndef LOS_SIGNAL_SUPPORT_MAX
+#define LOS_SIGNAL_SUPPORT_MAX 31
+#endif
+
+static inline int sigaddset(sigset_t *set, int sig)
+{
+	if ((sig <= 0) || (sig > LOS_SIGNAL_SUPPORT_MAX)) {
+		errno = EINVAL;
+		return -1;
+	}
+	*set |= (sigset_t)(1UL << (sig - 1));
+	return 0;
+}
+
+static inline int sigdelset(sigset_t *set, int sig)
+{
+	if ((sig <= 0) || (sig > LOS_SIGNAL_SUPPORT_MAX)) {
+		errno = EINVAL;
+		return -1;
+	}
+	*set &= ~(sigset_t)(1UL << (sig - 1));
+	return 0;
+}
+
+static inline int sigismember(const sigset_t *set, int sig)
+{
+	if ((sig <= 0) || (sig > LOS_SIGNAL_SUPPORT_MAX)) {
+		errno = EINVAL;
+		return -1;
+	}
+	return ((*set & (sigset_t)(1UL << (sig - 1))) != 0);
+}
 
 int sigprocmask(int, const sigset_t *__restrict, sigset_t *__restrict);
 int sigsuspend(const sigset_t *);
