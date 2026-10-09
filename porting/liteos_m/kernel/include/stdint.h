@@ -35,20 +35,46 @@ typedef uint16_t uint_least16_t;
 typedef uint32_t uint_least32_t;
 typedef uint64_t uint_least64_t;
 
+/* Limit macros: guarded because kernel headers (e.g. los_cpup_pri.h)
+ * may define the same names first (identical values, different spelling). */
+#ifndef INT8_MIN
 #define INT8_MIN   (-1-0x7f)
+#endif
+#ifndef INT16_MIN
 #define INT16_MIN  (-1-0x7fff)
+#endif
+#ifndef INT32_MIN
 #define INT32_MIN  (-1-0x7fffffff)
+#endif
+#ifndef INT64_MIN
 #define INT64_MIN  (-1-0x7fffffffffffffff)
+#endif
 
+#ifndef INT8_MAX
 #define INT8_MAX   (0x7f)
+#endif
+#ifndef INT16_MAX
 #define INT16_MAX  (0x7fff)
+#endif
+#ifndef INT32_MAX
 #define INT32_MAX  (0x7fffffff)
+#endif
+#ifndef INT64_MAX
 #define INT64_MAX  (0x7fffffffffffffff)
+#endif
 
+#ifndef UINT8_MAX
 #define UINT8_MAX  (0xff)
+#endif
+#ifndef UINT16_MAX
 #define UINT16_MAX (0xffff)
+#endif
+#ifndef UINT32_MAX
 #define UINT32_MAX (0xffffffffu)
+#endif
+#ifndef UINT64_MAX
 #define UINT64_MAX (0xffffffffffffffffu)
+#endif
 
 #define INT_FAST8_MIN   INT8_MIN
 #define INT_FAST64_MIN  INT64_MIN
