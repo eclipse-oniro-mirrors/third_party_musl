@@ -16,12 +16,16 @@
 #ifdef HOOK_ENABLE
 #include <unistd.h>
 #include <sys/types.h>
+#include <sys/mman.h>
 #include "musl_malloc.h"
 #include <malloc.h>
 #include "musl_malloc_dispatch_table.h"
 #include "common_def.h"
 #include "musl_preinit_common.h"
 #include "signal.h"
+#ifdef IO_GUARD_ENABLE
+#include "io_guard_impl.h"
+#endif
 #ifdef OHOS_FDTRACK_HOOK_ENABLE
 #include "musl_fdtrack.h"
 #endif
@@ -141,6 +145,12 @@ void free(void* mem)
 
 void* mmap(void* addr, size_t length, int prot, int flags, int fd, off_t offset)
 {
+#ifdef IO_GUARD_ENABLE
+	/* Validate before the dispatcher so a replacement mmap cannot bypass it. */
+	if (!(flags & MAP_ANON) && __io_guard_check(fd, 0) < 0) {
+		return MAP_FAILED;
+	}
+#endif
 	volatile const struct MallocDispatchType* dispatch_table = get_current_dispatch_table();
 	if (__predict_false(dispatch_table != NULL)) {
 		return dispatch_table->mmap(addr, length, prot, flags, fd, offset);
@@ -148,6 +158,11 @@ void* mmap(void* addr, size_t length, int prot, int flags, int fd, off_t offset)
 		return MuslMalloc(mmap)(addr, length, prot, flags, fd, offset);
 	}
 }
+
+/* This source set uses installed headers, where mmap64 can be a macro and
+ * musl's private weak_alias helper is not available. */
+#undef mmap64
+extern __typeof(mmap) mmap64 __attribute__((__weak__, __alias__("mmap")));
 
 int munmap(void* addr, size_t length)
 {

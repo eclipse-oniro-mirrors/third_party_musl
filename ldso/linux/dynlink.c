@@ -36,6 +36,9 @@
 #include "ld_log.h"
 #include "libc.h"
 #include "musl_fdsan.h"
+#ifdef IO_GUARD_ENABLE
+#include "io_guard_impl.h"
+#endif
 #include "namespace.h"
 #include "ns_config.h"
 #include "pthread_impl.h"
@@ -4907,6 +4910,9 @@ void __dls3(size_t *sp, size_t *auxv, size_t *aux)
 #endif
 	check_abs_path = true;
 	__init_fdsan();
+#ifdef IO_GUARD_ENABLE
+	__init_io_guard();
+#endif
 	InitTimeZoneParam();
 	InitDeviceApiVersion(); // do nothing when no define OHOS_ENABLE_PARAMETER
 	/* If the main program was already loaded by the kernel,

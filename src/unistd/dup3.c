@@ -3,10 +3,21 @@
 #include <errno.h>
 #include <fcntl.h>
 #include "syscall.h"
+#ifdef IO_GUARD_ENABLE
+#include "io_guard_impl.h"
+#endif
 
 int __dup3(int old, int new, int flags)
 {
 	int r;
+#ifdef IO_GUARD_ENABLE
+	if (__io_guard_check(old, 0) < 0) {
+		return -1;
+	}
+	if (old != new && __io_guard_check(new, 0) < 0) {
+		return -1;
+	}
+#endif
 #ifdef SYS_dup2
 	if (old==new) return __syscall_ret(-EINVAL);
 	if (flags) {

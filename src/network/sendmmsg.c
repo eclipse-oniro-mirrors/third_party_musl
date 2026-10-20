@@ -3,6 +3,9 @@
 #include <limits.h>
 #include <errno.h>
 #include "syscall.h"
+#ifdef IO_GUARD_ENABLE
+#include "io_guard_impl.h"
+#endif
 
 int sendmmsg(int fd, struct mmsghdr *msgvec, unsigned int vlen, unsigned int flags)
 {
@@ -25,6 +28,11 @@ int sendmmsg(int fd, struct mmsghdr *msgvec, unsigned int vlen, unsigned int fla
 error:
 	return i ? i : -1;
 #else
+#ifdef IO_GUARD_ENABLE
+	if (vlen && __io_guard_check(fd, 0) < 0) {
+		return -1;
+	}
+#endif
 	return syscall_cp(SYS_sendmmsg, fd, msgvec, vlen, flags);
 #endif
 }

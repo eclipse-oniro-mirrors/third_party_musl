@@ -95,6 +95,17 @@ if (is_lite_system && current_os == "ohos") {
     ]
   }
 
+  config("io_guard_inner_config") {
+    if (musl_io_guard_enabled) {
+      include_dirs = [ "interfaces/inner_api" ]
+      defines = [ "IO_GUARD_ENABLE" ]
+    }
+  }
+
+  group("io_guard_inner") {
+    public_configs = [ ":io_guard_inner_config" ]
+  }
+
   ohos_prebuilt_etc("musl_sysparam") {
     source = "${musl_dir}/etc/musl.para"
     relative_install_dir = "param"

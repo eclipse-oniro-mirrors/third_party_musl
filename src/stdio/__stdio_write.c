@@ -1,6 +1,20 @@
 #include "stdio_impl.h"
 #include <sys/uio.h>
 #include <string.h>
+#ifdef IO_GUARD_ENABLE
+#include "io_guard_impl.h"
+#endif
+
+/* Shared by buffered flushes and direct stdio output. Keep non-cancelling I/O. */
+static ssize_t write_fd(int fd, const void *buf, size_t len)
+{
+#ifdef IO_GUARD_ENABLE
+	if (__io_guard_check(fd, 0) < 0) {
+		return -1;
+	}
+#endif
+	return syscall(SYS_write, fd, buf, len);
+}
 
 ssize_t __flush_buffer(FILE *f)
 {
@@ -8,7 +22,7 @@ ssize_t __flush_buffer(FILE *f)
 	char *wbase = (char *)f->wbase;
 	size_t rem = f->wpos - f->wbase;
 	while (rem > 0) {
-		cnt = syscall(SYS_write, f->fd, wbase, rem);
+		cnt = write_fd(f->fd, wbase, rem);
 		if (cnt < 0) {
 			f->wpos = f->wbase = f->wend = 0;
 			f->flags |= F_ERR;
@@ -46,7 +60,7 @@ size_t __stdio_write(FILE *f, const unsigned char *buf, size_t len)
 		 * 1. file buffer < rem
 		 * 2. line buffer mode
 		 */
-		cnt = syscall(SYS_write, f->fd, wbuf, rem);
+		cnt = write_fd(f->fd, wbuf, rem);
 		if (cnt < 0) {
 			f->wpos = f->wbase = f->wend = 0;
 			f->flags |= F_ERR;

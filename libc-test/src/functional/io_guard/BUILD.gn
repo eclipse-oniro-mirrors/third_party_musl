@@ -1,0 +1,138 @@
+# Copyright (c) 2026 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("//build/test.gni")
+import("../../../../musl_src.gni")
+
+if (musl_io_guard_enabled) {
+  if (current_cpu == "arm") {
+    io_guard_arch = "arm"
+  } else if (current_cpu == "arm64") {
+    io_guard_arch = "aarch64"
+  } else if (current_cpu == "x86_64") {
+    io_guard_arch = "x86_64"
+  }
+
+  io_guard_musl_dir = "${root_out_dir}/obj/third_party/musl/usr"
+  io_guard_write_tests = [
+    "io_guard_write",
+    "io_guard_pwrite",
+    "io_guard_writev",
+    "io_guard_pwritev",
+    "io_guard_pwritev2_offset",
+    "io_guard_pwritev2_current",
+    "io_guard_pwritev2_flags",
+    "io_guard_close",
+    "io_guard_sendto",
+    "io_guard_sendmsg",
+    "io_guard_sendmmsg",
+    "io_guard_sendmmsg_empty",
+    "io_guard_sendfile",
+    "io_guard_splice",
+    "io_guard_tee",
+    "io_guard_copy_file_range",
+    "io_guard_dup",
+    "io_guard_dup2",
+    "io_guard_stdio_flush",
+    "io_guard_stdio_direct",
+    "io_guard_mmap_shared_read",
+    "io_guard_mmap_shared_write",
+    "io_guard_mmap_shared_none",
+    "io_guard_mmap_private_read",
+    "io_guard_mmap_private_write",
+    "io_guard_mmap_private_none",
+    "io_guard_mmap_anonymous",
+    "io_guard_dup3",
+    "io_guard_ftruncate",
+    "io_guard_fcntl_dupfd",
+    "io_guard_fcntl_dupfd_cloexec",
+    "io_guard_posix_fallocate",
+    "io_guard_fallocate",
+  ]
+  io_guard_tests = [ "io_guard" ] + io_guard_write_tests
+
+  foreach(test_name, io_guard_tests) {
+    ohos_executable(test_name) {
+      subsystem_name = "musl"
+      part_name = "libc-test"
+      sources = [ "${test_name}.c" ]
+      if (test_name != "io_guard") {
+        sources += [ "io_guard_write_common.c" ]
+      }
+
+      configs = [ "//third_party/musl:io_guard_inner_config" ]
+      include_dirs = [
+        "//third_party/musl/libc-test/src/common",
+        "//${io_guard_musl_dir}/include/${io_guard_arch}-linux-ohos",
+      ]
+      data_deps = [ "//third_party/musl/libc-test/src/common:libtest" ]
+      ldflags = [ "-nostdlib" ]
+      libs = [ "//${root_out_dir}/obj/third_party/musl/libc-test/src/common/libtest.a" ]
+
+      defines = []
+      if (target_cpu == "arm64") {
+        defines += [ "_ARM64_" ]
+      }
+      if (musl_extended_function) {
+        defines += [
+          "MUSL_EXTERNAL_FUNCTION",
+          "FEATURE_PTHREAD_CANCEL",
+        ]
+      }
+      if (musl_use_pthread_cancel) {
+        defines += [ "FEATURE_PTHREAD_CANCEL" ]
+      }
+      cflags = [ "-Wno-macro-redefined" ]
+      cflags_c = [
+        "-pipe",
+        "-std=c99",
+        "-D_POSIX_C_SOURCE=200809L",
+        "-Wall",
+        "-Wno-unused",
+        "-Wno-unused-function",
+        "-Wno-missing-braces",
+        "-Wno-overflow",
+        "-Wno-unknown-pragmas",
+        "-Wno-unsupported-floating-point-opt",
+        "-Wno-ignored-pragmas",
+        "-fno-builtin",
+        "-frounding-math",
+        "-Werror=implicit-function-declaration",
+        "-Werror=implicit-int",
+        "-Werror=pointer-sign",
+        "-Werror=pointer-arith",
+        "-g",
+        "-D_FILE_OFFSET_BITS=64",
+        "-Wno-error=bitwise-op-parentheses",
+        "-Wno-error=literal-range",
+      ]
+    }
+  }
+
+  # Preserve the old build target as an aggregate of short-running binaries.
+  group("io_guard_writes") {
+    testonly = true
+    deps = []
+    foreach(test_name, io_guard_write_tests) {
+      deps += [ ":${test_name}" ]
+    }
+  }
+
+  group("io_guard_test") {
+    testonly = true
+    deps = []
+    foreach(test_name, io_guard_tests) {
+      deps += [ ":${test_name}" ]
+    }
+  }
+}

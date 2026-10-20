@@ -1,5 +1,6 @@
 import("../../test_template.gni")
 import("test_src_functional.gni")
+import("../../../musl_src.gni")
 
 out_test_lib_dir = "${root_out_dir}/lib.unstripped/musl/libc-test-lib/"
 
@@ -16,6 +17,10 @@ foreach(s, functional_list) {
 group("functional_test") {
   testonly = true
   deps = [ ":dso_shared" ]
+
+  if (musl_io_guard_enabled) {
+    deps += [ "io_guard:io_guard_test" ]
+  }
 
   foreach(s, functional_list) {
     deps += [ ":${s}" ]

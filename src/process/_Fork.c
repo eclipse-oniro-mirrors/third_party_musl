@@ -9,6 +9,9 @@
 #include "proc_xid_impl.h"
 #endif
 #include "fork_impl.h"
+#ifdef IO_GUARD_ENABLE
+#include "io_guard_impl.h"
+#endif
 #include "hilog_adapter.h"
 
 static void dummy(int x) { }
@@ -32,6 +35,10 @@ void __post_Fork(int ret)
 		self->next = self->prev = self;
 		__thread_list_lock = 0;
 		libc.threads_minus_1 = 0;
+#ifdef IO_GUARD_ENABLE
+		/* Disable checking in the child, retaining inherited tokens. */
+		io_guard_set_error_level(IO_GUARD_DISABLED);
+#endif
 #ifndef __LITEOS__
 		__clear_proc_pid();
 		// Setting the child process fdsan is invalid,

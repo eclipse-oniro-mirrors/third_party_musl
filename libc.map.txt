@@ -660,6 +660,12 @@
     fdiml;
     fdopen;
     fdopendir;
+    io_guard_exchange_token;
+    io_guard_get_error_level;
+    io_guard_mmap;
+    io_guard_pwrite;
+    io_guard_set_error_level;
+    io_guard_write;
     fdsan_create_owner_tag;
     fdsan_close_with_tag;
     fdsan_exchange_owner_tag;
