@@ -224,6 +224,7 @@ pid_t vfork(void);
 int vhangup(void);
 int chroot(const char *);
 int getpagesize(void);
+int __getpagesize(void);
 int getdtablesize(void);
 int sethostname(const char *, size_t);
 int getdomainname(char *, size_t);
@@ -253,6 +254,9 @@ int syncfs(int);
 int euidaccess(const char *, int);
 int eaccess(const char *, int);
 ssize_t copy_file_range(int, off_t *, int, off_t *, size_t, unsigned);
+int group_member(gid_t);
+int close_range(unsigned int, unsigned int, int);
+void closefrom(int);
 #ifndef __LITEOS_A__
 pid_t gettid(void);
 #endif

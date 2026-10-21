@@ -40,7 +40,12 @@ int getpwnam_r (const char *, struct passwd *, char *, size_t, struct passwd **)
 
 #ifdef _GNU_SOURCE
 struct passwd *fgetpwent(FILE *);
+int fgetpwent_r(FILE *, struct passwd *, char *, size_t, struct passwd **);
 int putpwent(const struct passwd *, FILE *);
+#endif
+
+#if defined(_GNU_SOURCE) || defined(_XOPEN_SOURCE)
+int getpwent_r(struct passwd *, char *, size_t, struct passwd **);
 #endif
 
 #ifdef __cplusplus

@@ -1,9 +1,12 @@
 #include <netdb.h>
 #include <string.h>
+#include <errno.h>
+#include "lock.h"
 
 /* do we really need all these?? */
 
 static int idx;
+static int proto_lock[1];
 static const unsigned char protos[] = {
 	"\000ip\0"
 	"\001icmp\0"
@@ -45,23 +48,32 @@ static const unsigned char protos[] = {
 
 void endprotoent(void)
 {
+	LOCK(proto_lock);
 	idx = 0;
+	UNLOCK(proto_lock);
 }
 
 void setprotoent(int stayopen)
 {
+	LOCK(proto_lock);
 	idx = 0;
+	UNLOCK(proto_lock);
 }
 
 struct protoent *getprotoent(void)
 {
 	static struct protoent p;
 	static const char *aliases;
-	if (idx >= sizeof protos) return NULL;
+	LOCK(proto_lock);
+	if (idx >= sizeof protos) {
+		UNLOCK(proto_lock);
+		return NULL;
+	}
 	p.p_proto = protos[idx];
 	p.p_name = (char *)&protos[idx+1];
 	p.p_aliases = (char **)&aliases;
 	idx += strlen(p.p_name) + 2;
+	UNLOCK(proto_lock);
 	return &p;
 }
 
@@ -81,4 +93,82 @@ struct protoent *getprotobynumber(int num)
 	do p = getprotoent();
 	while (p && p->p_proto != num);
 	return p;
+}
+
+static int fill_protoent(struct protoent *res, size_t pos,
+	char *buf, size_t buflen, struct protoent **result)
+{
+	const char *pname = (const char *)&protos[pos+1];
+	size_t namelen = strlen(pname);
+	size_t align = -(size_t)buf & (sizeof(char *) - 1);
+	size_t need = namelen + 1 + sizeof(char*) + align;
+
+	if (buflen < need) {
+		*result = NULL;
+		return ERANGE;
+	}
+	buf += align;
+	char **aliases = (char **)buf;
+	buf += sizeof(char *);
+	memcpy(buf, pname, namelen + 1);
+	aliases[0] = NULL;
+	res->p_name = buf;
+	res->p_proto = protos[pos];
+	res->p_aliases = aliases;
+	*result = res;
+	return 0;
+}
+
+int getprotoent_r(struct protoent *res, char *buf, size_t buflen,
+	struct protoent **result)
+{
+	int rv;
+	LOCK(proto_lock);
+	if (idx >= (int)sizeof protos) {
+		*result = NULL;
+		rv = ENOENT;
+	} else {
+		rv = fill_protoent(res, idx, buf, buflen, result);
+		if (rv == 0) {
+			const char *pname = (const char *)&protos[idx+1];
+			idx += strlen(pname) + 2;
+		}
+	}
+	UNLOCK(proto_lock);
+	return rv;
+}
+
+int getprotobyname_r(const char *name, struct protoent *res,
+	char *buf, size_t buflen, struct protoent **result)
+{
+	size_t i;
+	*result = NULL;
+	if (!name) {
+		return EINVAL;
+	}
+	for (i = 0; i < sizeof protos; ) {
+		const char *pname = (const char *)&protos[i+1];
+		size_t namelen = strlen(pname);
+		if (!strcmp(name, pname)) {
+			return fill_protoent(res, i, buf, buflen, result);
+		}
+		i += namelen + 2;
+	}
+	return ENOENT;
+}
+
+int getprotobynumber_r(int proto, struct protoent *res,
+	char *buf, size_t buflen, struct protoent **result)
+{
+	size_t i;
+	*result = NULL;
+	for (i = 0; i < sizeof protos; ) {
+		const char *pname = (const char *)&protos[i+1];
+		size_t namelen = strlen(pname);
+		if (protos[i] == proto) {
+			return fill_protoent(res, i, buf, buflen, result);
+		}
+		i += namelen + 2;
+	}
+	return ENOENT;
 }

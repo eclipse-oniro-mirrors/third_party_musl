@@ -2,7 +2,9 @@
 #include <unistd.h>
 #include "libc.h"
 
-int getpagesize(void)
+int __getpagesize(void)
 {
 	return PAGE_SIZE;
 }
+
+weak_alias(__getpagesize, getpagesize);

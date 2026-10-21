@@ -71,6 +71,7 @@ typedef struct sigaltstack stack_t;
 #define ILL_COPROC 7
 #define ILL_BADSTK 8
 #define ILL_ILLPACCFI 0xacac
+#define ILL_ILLBTICFI 0xadad
 
 #define SEGV_MAPERR 1
 #define SEGV_ACCERR 2
@@ -243,6 +244,7 @@ int sigqueue(pid_t, int, union sigval);
 
 int pthread_sigmask(int, const sigset_t *__restrict, sigset_t *__restrict);
 int pthread_kill(pthread_t, int);
+int pthread_sigqueue(pthread_t, int, const union sigval);
 
 void psiginfo(const siginfo_t *, const char *);
 void psignal(int, const char *);
