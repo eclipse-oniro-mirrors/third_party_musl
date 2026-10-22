@@ -81,4 +81,5 @@ functionalext_supplement_unistd_test = [
   "getcwd",
   "chdir",
   "fchdir",
+  "appuid",
 ]

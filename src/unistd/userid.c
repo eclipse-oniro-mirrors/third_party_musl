@@ -5,6 +5,9 @@
 #include <stdint.h>
 #include <syscall.h>
 #include "libc.h"
+#ifdef MUSL_EXTERNAL_FUNCTION
+#include "musl_log.h"
+#endif
 
 #define HM_ACCESS_TOKEN_ID_IOCTL_BASE 'A'
 
@@ -42,7 +45,7 @@ uid_t getappuid(void)
             return userid;
         }
     }
-    /* ioctl faild, fall back to getuid*/
+    /* ioctl failed, fall back to getuid*/
 #endif
     return getuid();
 }
@@ -69,7 +72,7 @@ static void do_setappuid(void *p)
     }
     long ret = __syscall(SYS_ioctl, fd, ACCESS_TOKENID_SET_USERID, &c->uid);
     if (__syscall(SYS_close, fd) && !ret) {
-
+        MUSL_LOGE("setappuid: close fd failed after successful ioctl, uid: %{public}d", c->uid);
     }
     if (ret && !c->ret) {
         __block_all_sigs(0);
@@ -84,9 +87,10 @@ int setappuid(uid_t uid)
     struct setappuid_ctx c = { .uid = uid, .ret = 1 };
     __synccall(do_setappuid, &c);
     if (c.ret != 0) {
-        /* ioctl faild or no thread executed, fall back to setuid*/
+        /* ioctl failed or no thread executed, fall back to setuid*/
         return setuid(uid);
     }
+    return 0;
 #else
     return setuid(uid);
 #endif
