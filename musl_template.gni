@@ -354,6 +354,12 @@ template("static_and_shared_libs_template") {
     }
 
     defines = []
+    if (musl_target_os == "linux" && musl_arch != "cortex_m" &&
+        musl_arch != "riscv32" &&
+        (target_name == "soft_musl_src_shared" ||
+         target_name == "soft_musl_src_shared_sp")) {
+      defines += [ "OHOS_ENABLE_PTHREAD_KEY_HISYSEVENT" ]
+    }
     defines += [ "FEATURE_ICU_LOCALE" ]
     if (musl_use_icu_locale == true) {
       defines += [ "FEATURE_ICU_LOCALE_TMP" ]
@@ -441,6 +447,10 @@ template("static_and_shared_libs_template") {
       "//build/config/components/musl:soft_musl_config",
       ":$cur_gwp_asan_config",
     ]
+    if (!defined(include_dirs)) {
+      include_dirs = []
+    }
+    include_dirs += [ "${target_out_dir}/${musl_ported_dir}/src/hilog/linux" ]
 
     if (use_hwasan) {
       defines += [ "HWASAN_REMOVE_CLEANUP" ]
