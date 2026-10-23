@@ -172,22 +172,26 @@ static int parse_servent_r(char *line, struct servent *se,
 struct servent *getservent(void)
 {
 #ifdef __LITEOS_A__
-	int rv;
-	LOCK(serv_lock);
-	rv = ensure_sd_open();
-	if (rv) {
-		errno = rv;
-		UNLOCK(serv_lock);
+	if (sd == NULL) {
+		if ((sd = malloc(sizeof(struct servdata))) == NULL) {
+			errno = ENOMEM;
+			return NULL;
+		}
+		sd->servf = NULL;
+		sd->stayopen = 0;
+	}
+	if (!sd->servf && !(sd->servf = fopen(SERV_FILE_PATH, "r"))) {
+		errno = ENOENT;
+		free(sd);
+		sd = NULL;
 		return NULL;
 	}
 	do {
 		if (!fgets(sd->buf, BUFFER_SIZE - 1, sd->servf)) {
 			errno = EINVAL;
-			UNLOCK(serv_lock);
 			return NULL;
 		}
 	} while (servent_resolv());
-	UNLOCK(serv_lock);
 	return &(sd->se);
 #else
 	return 0;
@@ -238,7 +242,9 @@ int getservent_r(struct servent *se, char *buf, size_t buflen,
 	(void)se;
 	(void)buf;
 	(void)buflen;
-	*result = NULL;
+	if (result) {
+		*result = NULL;
+	}
 	return 0;
 #endif
 }
@@ -246,27 +252,23 @@ int getservent_r(struct servent *se, char *buf, size_t buflen,
 void endservent(void)
 {
 #ifdef __LITEOS_A__
-	LOCK(serv_lock);
-	if (sd != NULL) {
-		if (sd->stayopen == 0) {
-			if (sd->servf != NULL)
-				fclose(sd->servf);
-			free(sd);
-			sd = NULL;
-		}
+	if (sd == NULL)
+		return;
+	if (sd->stayopen == 0) {
+		if (sd->servf != NULL)
+			fclose(sd->servf);
+		free(sd);
+		sd = NULL;
 	}
-	UNLOCK(serv_lock);
 #endif
 }
 
 void setservent(int stayopen)
 {
 #ifdef __LITEOS_A__
-	LOCK(serv_lock);
 	if (sd == NULL) {
 		if ((sd = malloc(sizeof(struct servdata))) == NULL) {
 			errno = ENOMEM;
-			UNLOCK(serv_lock);
 			return;
 		}
 		sd->servf = NULL;
@@ -276,6 +278,5 @@ void setservent(int stayopen)
 	else
 		rewind(sd->servf);
 	sd->stayopen = stayopen;
-	UNLOCK(serv_lock);
 #endif
 }

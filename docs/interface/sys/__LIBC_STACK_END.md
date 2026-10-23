@@ -4,7 +4,7 @@
 
 #### **NAME**
 
-​       __libc_stack_end - pointer to the top (highest address) of the process stack.
+​       __libc_stack_end - approximate pointer to the top (highest address) of the process stack.
 
 #### **SYNOPSIS**
 
@@ -14,15 +14,17 @@ extern void *__libc_stack_end;
 
 #### **DESCRIPTION**
 
-​The __libc_stack_end variable is a global pointer that holds the highest address of the process stack. It is set once during process startup and remains constant for the entire lifetime of the process.
+​The __libc_stack_end variable is a global pointer that approximates the highest address of the process stack. The value is not the exact stack top: __builtin_frame_address(0) reflects the stack frame of __libc_start_main, which is below the actual stack top. It is set during process startup and remains constant for the entire lifetime of the process.
 
-The variable is assigned in one of two ways depending on how the process is loaded:
+The variable is assigned in __libc_start_main from __builtin_frame_address(0), which reflects the runtime stack frame address.
 
-- **Statically linked or direct-exec processes**: In the C runtime startup code (_start → _start_c), __libc_stack_end is assigned from the initial stack pointer value passed by the kernel.
+- **Dynamically linked processes**: __libc_stack_end is first assigned in __dls2 from the stack pointer (sp), then overwritten in __libc_start_main with __builtin_frame_address(0).
 
-- **Dynamically linked processes**: During dynamic linker initialization (__dls2), __libc_stack_end is assigned from the stack pointer (sp).
+- **Statically linked or direct-exec processes**: __libc_stack_end is assigned only in __libc_start_main from __builtin_frame_address(0).
 
-The value is used internally by the C library for stack-related operations, such as stack unwinding and backtrace support. Applications and libraries may also read this variable to determine the extent of the main thread's stack.
+After startup completes, the variable is never modified again.
+
+The value is provided for compatibility with glibc ABI. Third-party libraries and tools (such as performance profilers and backtrace utilities) may reference this variable to approximate the extent of the main thread's stack. The C library itself does not read this variable internally.
 
 The variable is defined in the C library internal source and is not declared in any public header; users who wish to access it must declare it as extern themselves.
 
@@ -41,7 +43,7 @@ The variable is defined in the C library internal source and is not declared in 
 | __libc_stack_end | Thread safety | MT-Safe (read-only after initialization) |
 |             | Async-signal-safety | AS-Safe (read) |
 
-The variable is written once during startup before any user code runs and is never modified afterward. All subsequent reads are safe from any thread or signal handler.
+The variable is written during startup (once for statically linked, twice for dynamically linked) before any user code runs, and is never modified afterward. All subsequent reads are safe from any thread or signal handler.
 
 #### EXAMPLES
 

@@ -10,6 +10,7 @@
 #include <string.h>
 #include <stddef.h>
 #include <stdarg.h>
+#include <sys/single_threaded.h>
 
 pid_t getpid(void);
 
@@ -381,6 +382,7 @@ int __pthread_create(pthread_t *restrict res, const pthread_attr_t *restrict att
 		self->tsd = (void **)__pthread_tsd_main;
 		__membarrier_init();
 		libc.threaded = 1;
+		__libc_single_threaded = 0;
 	}
 	if (attrp && !c11) attr = *attrp;
 

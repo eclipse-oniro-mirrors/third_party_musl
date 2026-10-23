@@ -23,17 +23,17 @@ The service database is read from the file /etc/services at runtime. On the firs
 
 The caller must supply a buffer buf of buflen bytes. The function copies the service name, protocol, and alias pointer array into this buffer, and the fields of se are set to point into buf. The result pointer *result is set to se on success.
 
-The internal file cursor and related state are protected by an internal lock (serv_lock) so that concurrent calls are serialized.
+The reentrant getservent_r() protects the internal file cursor and related state with an internal lock (serv_lock) so that concurrent calls to getservent_r() are serialized. The non-reentrant getservent(), setservent(), and endservent() do not acquire this lock and are not thread-safe.
 
-The setservent() and endservent() functions share the same internal state (sd and serv_lock) as getservent_r(). setservent() rewinds or reopens the file, and endservent() closes the file and frees the internal data structure. Calling setservent() resets the enumeration position for getservent_r().
+The setservent() and endservent() functions share the same internal state (sd) as getservent_r(). setservent() rewinds or reopens the file, and endservent() closes the file and frees the internal data structure. Calling setservent() resets the enumeration position for getservent_r().
 
-Lines beginning with '#' and blank lines are skipped during enumeration. Lines that cannot be parsed are also skipped.
+Lines beginning with '#' and blank lines are skipped during enumeration. Lines that cannot be parsed, or whose protocol is not tcp/udp, or whose port is outside the range 1-65535, are also silently skipped.
 
-This function is the reentrant counterpart of getservent(). While it does not store the result in static storage, the file cursor and related state are shared static state protected by a lock.
+This function is the reentrant counterpart of getservent(). While it does not store the result in static storage, the file cursor and related state are shared static state. Access from getservent_r() is protected by serv_lock. The actual implementation is available only when compiled with __LITEOS_A__ defined. On other platforms, the function is a stub that returns 0 and sets *result to NULL.
 
 #### **RETURN VALUE**
 
-​On success, getservent_r() returns 0 and sets *result to point to se.
+​On success, getservent_r() returns 0 and sets *result to point to se. On platforms where __LITEOS_A__ is not defined, the function is a stub that returns 0 and sets *result to NULL.
 
 When all entries have been enumerated or the services file cannot be opened, it returns ENOENT and sets *result to NULL.
 
@@ -47,16 +47,18 @@ When memory allocation for the internal data structure fails, the function retur
 
 **ERANGE**: The supplied buffer buf is too small to hold the result. Increase buflen and retry.
 
+**ESPIPE**: The file position could not be saved or restored during an ERANGE retry, making it impossible to re-read the current entry.
+
 **ENOMEM**: Memory allocation for the internal data structure failed.
 
 #### ATTRIBUTES
 
 | Interface | Attribute     | Value          |
 | --------- | ------------- | -------------- |
-| getservent_r() | Thread safety | MT-Safe (serialized) |
+| getservent_r() | Thread safety | MT-Safe (serialized, only within _r variants) |
 |             | Signal safety | Not Safe       |
 
-Although the function is reentrant in terms of result storage, the file cursor is shared internal state. Concurrent calls are serialized via an internal lock.
+Although the function is reentrant in terms of result storage, the file cursor is shared internal state. Concurrent calls to getservent_r() are serialized via an internal lock. The non-reentrant getservent(), setservent(), and endservent() do not use the lock and are not thread-safe. These functions share the same static state (service data structure, file pointer). Mixing any of getservent(), setservent(), endservent() with getservent_r() is strictly prohibited, as it will cause unpredictable results due to unsynchronized access to shared state.
 
 #### EXAMPLES
 

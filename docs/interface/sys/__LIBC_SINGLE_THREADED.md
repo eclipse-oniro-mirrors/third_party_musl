@@ -18,7 +18,7 @@ char __libc_single_threaded;
 
 ​The __libc_single_threaded variable is a global flag that indicates whether the process is currently running in single-threaded mode.
 
-The variable is initialized to 1 at process start, meaning the process is single-threaded. When the first thread is created via pthread_create(), the C library atomically sets __libc_single_threaded to 0 to indicate that the process has become multi-threaded. Once flipped to 0, the value never reverts to 1 for the remainder of the process lifetime, even if all additional threads later exit.
+The variable is initialized to 1 at process start, meaning the process is single-threaded. When the first thread is created via pthread_create(), the C library sets __libc_single_threaded to 0 to indicate that the process has become multi-threaded. This is a plain char assignment without atomic instructions or memory barriers. Once flipped to 0, the value never reverts to 1 for the remainder of the process lifetime, even if all additional threads later exit.
 
 Applications may read this variable at runtime to perform single-threaded optimizations: for example, skipping locking on data structures that are only accessed from a single thread while the process remains single-threaded. Since the transition is one-way (1 to 0), a value of 1 read at any point guarantees that no additional threads have been or are being created; however, once the value is observed as 0, the process must be treated as multi-threaded for the rest of its lifetime.
 
@@ -29,15 +29,6 @@ Applications may read this variable at runtime to perform single-threaded optimi
 #### **ERRORS**
 
 ​Not applicable.
-
-#### ATTRIBUTES
-
-| Interface | Attribute     | Value          |
-| --------- | ------------- | -------------- |
-| __libc_single_threaded | Thread safety | MT-Safe (read); transition is atomic write |
-|             | Async-signal-safety | AS-Safe (read) |
-
-The variable is declared as extern in <sys/single_threaded.h> and defined in the C library internal source.
 
 #### EXAMPLES
 

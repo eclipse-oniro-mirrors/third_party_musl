@@ -24,7 +24,7 @@ The caller must supply a buffer buf of size bytes. The function copies the parse
 
 The buffer must be large enough to hold both the line data and the member pointer array. The required size depends on the number of members in the group entry.
 
-The function shares an internal file cursor (f) with the non-reentrant getgrent() function. This cursor is protected by an internal lock (grent_lock) so that concurrent calls are serialized.
+The function shares an internal file cursor (f) with the non-reentrant getgrent() function. The reentrant getgrent_r() protects this cursor with an internal lock (grent_lock) so that concurrent calls to getgrent_r() are serialized. The non-reentrant getgrent(), setgrent(), and getgrgid()/getgrnam() do not acquire this lock and are not thread-safe.
 
 The setgrent() function (defined in getgrent.c) closes the shared file pointer, causing subsequent getgrent_r() calls to reopen the file from the beginning. endgrent() is a weak alias of setgrent() and has the same effect.
 
@@ -32,7 +32,7 @@ When the end of the file is reached, subsequent calls return ENOENT and set *res
 
 If /etc/group cannot be opened, the function returns ENOENT and sets *res to NULL.
 
-This function is the reentrant counterpart of getgrent(). While it does not store the result in static storage, the file cursor is shared static state protected by a lock.
+This function is the reentrant counterpart of getgrent(). While it does not store the result in static storage, the file cursor is shared static state. Access to the cursor from getgrent_r() is protected by grent_lock.
 
 #### **RETURN VALUE**
 
@@ -48,14 +48,16 @@ When the supplied buffer is too small to hold the result, it returns ERANGE and 
 
 **ERANGE**: The supplied buffer buf is too small to hold the result, including the line data and the member pointer array. Increase size and retry.
 
+**ESPIPE**: The file position could not be saved or restored during an ERANGE retry, making it impossible to re-read the current entry.
+
 #### ATTRIBUTES
 
 | Interface | Attribute     | Value          |
 | --------- | ------------- | -------------- |
-| getgrent_r() | Thread safety | MT-Safe (serialized) |
+| getgrent_r() | Thread safety | MT-Safe (serialized, only within _r variants) |
 |             | Signal safety | Not Safe       |
 
-Although the function is reentrant in terms of result storage, the file cursor is shared internal state. Concurrent calls are serialized via an internal lock.
+Although the function is reentrant in terms of result storage, the file cursor is shared internal state. Concurrent calls to getgrent_r() are serialized via an internal lock. The non-reentrant getgrent(), setgrent(), getgrgid(), and getgrnam() do not use the lock and are not thread-safe. These functions share the same static state (file pointer, line buffer, group struct). Mixing any of getgrent(), getgrgid(), getgrnam(), setgrent() with getgrent_r() is strictly prohibited, as it will cause unpredictable results due to unsynchronized access to shared state.
 
 #### EXAMPLES
 

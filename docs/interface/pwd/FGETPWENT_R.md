@@ -36,13 +36,13 @@ This function does not use any internal locks or shared cursor state. The caller
 
 When the end of the stream is reached, it returns ENOENT and sets *res to NULL.
 
-When the supplied buffer is too small to hold the result, it returns ERANGE and sets *res to NULL; the caller should retry with a larger buffer.
+When the supplied buffer is too small to hold the result, it returns ERANGE and sets *res to NULL. The entry has already been consumed; retrying will read the next entry, not the same one.
 
 #### **ERRORS**
 
-**ENOENT**: The end of the stream has been reached, or the current line could not be parsed as a valid passwd entry.
+**ENOENT**: The end of the stream has been reached.
 
-**ERANGE**: The supplied buffer buf is too small to hold the result. Increase size and retry.
+**ERANGE**: The supplied buffer buf is too small to hold the result. The entry has been consumed and cannot be retried.
 
 #### ATTRIBUTES
 

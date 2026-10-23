@@ -48,32 +48,23 @@ static const unsigned char protos[] = {
 
 void endprotoent(void)
 {
-	LOCK(proto_lock);
 	idx = 0;
-	UNLOCK(proto_lock);
 }
 
 void setprotoent(int stayopen)
 {
-	LOCK(proto_lock);
 	idx = 0;
-	UNLOCK(proto_lock);
 }
 
 struct protoent *getprotoent(void)
 {
 	static struct protoent p;
 	static const char *aliases;
-	LOCK(proto_lock);
-	if (idx >= sizeof protos) {
-		UNLOCK(proto_lock);
-		return NULL;
-	}
+	if (idx >= sizeof protos) return NULL;
 	p.p_proto = protos[idx];
 	p.p_name = (char *)&protos[idx+1];
 	p.p_aliases = (char **)&aliases;
 	idx += strlen(p.p_name) + 2;
-	UNLOCK(proto_lock);
 	return &p;
 }
 

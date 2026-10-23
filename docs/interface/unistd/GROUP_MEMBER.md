@@ -18,7 +18,7 @@ int group_member(gid_t gid);
 
 ​The group_member() function checks whether the group ID gid matches any of the supplementary group IDs of the calling process (as returned by getgroups()).
 
-The function retrieves the supplementary group list via getgroups(). It uses a doubling-allocation strategy with alloca: starting from an initial capacity of NGROUPS_MAX (defaulting to 16 if undefined), it immediately doubles the capacity before each getgroups() call, so the first call uses NGROUPS_MAX * 2 (32 by default). This process repeats until the returned count is strictly less than the requested capacity, ensuring the complete list has been obtained.
+The function first calls getgroups() with a count of 0 and a NULL buffer to determine the number of supplementary groups. It then allocates a variable-length array (VLA) of that size on the stack and calls getgroups() again to fill it. This avoids the stack accumulation issue of a repeated alloca doubling strategy.
 
 #### **RETURN VALUE**
 
@@ -33,7 +33,7 @@ If getgroups() fails, the function returns 0 (indicating the process is not a me
 | Interface | Attribute     | Value          |
 | --------- | ------------- | -------------- |
 | group_member() | Thread safety | MT-Safe |
-|             | Async-signal-safety | AS-Unsafe (uses alloca) |
+|             | Async-signal-safety | AS-Unsafe (uses VLA) |
 
 #### EXAMPLES
 

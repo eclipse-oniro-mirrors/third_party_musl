@@ -20,7 +20,7 @@ int pthread_sigqueue(pthread_t t, int sig, const union sigval value);
 
 The function constructs a siginfo_t structure with si_code set to SI_QUEUE, si_pid set to the caller's process ID, si_uid set to the caller's user ID, and si_value set to the supplied value. This structure is passed to the kernel via the rt_tgsigqueueinfo system call, which delivers the signal to the specific thread identified by its thread ID (tid) within the calling process.
 
-Access to the target thread's tid is protected by the thread's internal killlock to ensure that the tid is valid and stable during the system call. Additionally, application-level signals are temporarily blocked during the operation to prevent interference from signal handlers that might alter thread state.
+The tid passed to the system call is read while holding the target thread's killlock; a lock-free pre-check provides a fast ESRCH path for already-exited threads, and the kernel additionally validates thread liveness. Additionally, application-level signals are temporarily blocked during the operation to prevent interference from signal handlers that might alter thread state.
 
 The following signals are reserved for internal C library use and must not be sent via this interface:
 

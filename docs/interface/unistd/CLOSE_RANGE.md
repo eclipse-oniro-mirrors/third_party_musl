@@ -32,8 +32,6 @@ On failure, it returns -1 and sets errno to indicate the error.
 
 **EINVAL**: first is greater than last, or flags is nonzero in the fallback path (when the kernel does not provide the close_range system call).
 
-**EBADF**: One or more descriptors in the range are not valid (reported by the kernel only).
-
 #### ATTRIBUTES
 
 | Interface | Attribute     | Value          |

@@ -11,10 +11,8 @@ static int pwent_lock[1];
 
 void setpwent()
 {
-	LOCK(pwent_lock);
 	if (f) fclose(f);
 	f = 0;
-	UNLOCK(pwent_lock);
 }
 
 weak_alias(setpwent, endpwent);
@@ -22,32 +20,23 @@ weak_alias(setpwent, endpwent);
 struct passwd *getpwent()
 {
 	struct passwd *res;
-	LOCK(pwent_lock);
 	if (!f) f = fopen("/etc/passwd", "rbe");
-	if (!f) {
-		UNLOCK(pwent_lock);
-		return 0;
-	}
+	if (!f) return 0;
 	__getpwent_a(f, &pw, &line, &size, &res);
-	UNLOCK(pwent_lock);
 	return res;
 }
 
 struct passwd *getpwuid(uid_t uid)
 {
 	struct passwd *res;
-	LOCK(pwent_lock);
 	__getpw_a(0, uid, &pw, &line, &size, &res);
-	UNLOCK(pwent_lock);
 	return res;
 }
 
 struct passwd *getpwnam(const char *name)
 {
 	struct passwd *res;
-	LOCK(pwent_lock);
 	__getpw_a(name, 0, &pw, &line, &size, &res);
-	UNLOCK(pwent_lock);
 	return res;
 }
 

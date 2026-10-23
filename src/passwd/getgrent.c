@@ -25,10 +25,8 @@ static int grent_lock[1];
 
 void setgrent()
 {
-	LOCK(grent_lock);
 	if (f) fclose(f);
 	f = 0;
-	UNLOCK(grent_lock);
 }
 
 weak_alias(setgrent, endgrent);
@@ -37,14 +35,9 @@ struct group *getgrent()
 {
 	struct group *res;
 	size_t size=0, nmem=0;
-	LOCK(grent_lock);
 	if (!f) f = fopen("/etc/group", "rbe");
-	if (!f) {
-		UNLOCK(grent_lock);
-		return 0;
-	}
+	if (!f) return 0;
 	__getgrent_a(f, &gr, &line, &size, &mem, &nmem, &res);
-	UNLOCK(grent_lock);
 	return res;
 }
 
@@ -52,9 +45,7 @@ struct group *getgrgid(gid_t gid)
 {
 	struct group *res;
 	size_t size=0, nmem=0;
-	LOCK(grent_lock);
 	__getgr_a(0, gid, &gr, &line, &size, &mem, &nmem, &res);
-	UNLOCK(grent_lock);
 	return res;
 }
 
@@ -62,9 +53,7 @@ struct group *getgrnam(const char *name)
 {
 	struct group *res;
 	size_t size=0, nmem=0;
-	LOCK(grent_lock);
 	__getgr_a(name, 0, &gr, &line, &size, &mem, &nmem, &res);
-	UNLOCK(grent_lock);
 	return res;
 }
 

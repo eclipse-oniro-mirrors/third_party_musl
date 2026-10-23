@@ -14,24 +14,21 @@
  */
 
 #define _GNU_SOURCE
+#include <stdlib.h>
 #include <unistd.h>
-#include <limits.h>
-
-#ifndef NGROUPS_MAX
-#define NGROUPS_MAX 16
-#endif
 
 int group_member(gid_t gid)
 {
-	int n = 0;
-	int cap = NGROUPS_MAX;
-	gid_t *list;
+	int n = getgroups(0, NULL);
+	if (n <= 0) {
+		return 0;
+	}
 
-	do {
-		cap <<= 1;
-		list = __builtin_alloca(cap * sizeof *list);
-		n = getgroups(cap, list);
-	} while (n == cap);
+	gid_t list[n];
+	n = getgroups(n, list);
+	if (n < 0) {
+		return 0;
+	}
 
 	while (n > 0) {
 		if (list[--n] == gid) {
