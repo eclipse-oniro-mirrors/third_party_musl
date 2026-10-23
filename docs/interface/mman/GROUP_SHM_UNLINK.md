@@ -1,6 +1,6 @@
-## GROUP_SHM_UNLINK &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; OHOS Programmer's Manual
+# GROUP_SHM_UNLINK &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; OHOS Programmer's Manual
 
-#### **NAME**
+## **NAME**
 
 ​       group_shm_unlink - remove a group-scoped POSIX shared memory object name.
 
@@ -73,7 +73,7 @@ int group_shm_unlink(const char *name, gid_t gid);
 
 When existing musl logging is enabled, a failed call logs the interface name
 and errno directly, without changing the original errno or adding permission
-checks. group_sem_unlink() uses the shared group_shm_unlink() diagnostic.
+checks.
 
 ​       Use the same **gid** and **name** that were passed to group_shm_open().
 
