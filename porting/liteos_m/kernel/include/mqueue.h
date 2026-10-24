@@ -9,6 +9,7 @@ extern "C" {
 #define __NEED_size_t
 #define __NEED_ssize_t
 #define __NEED_pthread_attr_t
+#define __NEED_cpu_set_t
 #define __NEED_time_t
 #define __NEED_struct_timespec
 #define __NEED_uintptr_t

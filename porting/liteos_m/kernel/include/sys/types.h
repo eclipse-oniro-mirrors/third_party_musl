@@ -32,6 +32,7 @@ extern "C" {
 
 #define __NEED_pthread_t
 #define __NEED_pthread_attr_t
+#define __NEED_cpu_set_t
 #define __NEED_pthread_mutexattr_t
 #define __NEED_pthread_condattr_t
 #define __NEED_pthread_rwlockattr_t
