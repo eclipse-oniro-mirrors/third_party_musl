@@ -215,6 +215,10 @@ ssize_t tee(int, int, size_t, unsigned);
 #define off64_t off_t
 #endif
 
+#if defined(_LARGEFILE64_SOURCE) || defined(_GNU_SOURCE)
+int __openat64_2(int, const char *, int);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

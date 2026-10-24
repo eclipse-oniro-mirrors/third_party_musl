@@ -4,6 +4,7 @@
 #include <sys/mman.h>
 #include <string.h>
 #include <stddef.h>
+#include <sys/single_threaded.h>
 #include "pthread_impl.h"
 #include "libc.h"
 #include "atomic.h"
@@ -56,6 +57,7 @@ int __init_tp(void *p)
 	__membarrier_init();
 #endif
 	libc.threaded = 1;
+	__libc_single_threaded = 0;
 	return 0;
 }
 

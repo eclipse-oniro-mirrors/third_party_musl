@@ -4135,6 +4135,7 @@ void InstallPACHandler(void)
 hidden void __dls2(unsigned char *base, size_t *sp)
 {
 	size_t *auxv;
+	__libc_stack_end = sp;
 	for (auxv=sp+1+*sp+1; *auxv; auxv++);
 	auxv++;
 	if (DL_FDPIC) {

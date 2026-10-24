@@ -86,6 +86,8 @@ int __libc_start_main(int (*main)(int,char **,char **), int argc, char **argv,
 {
 	char **envp = argv+argc+1;
 
+	__libc_stack_end = __builtin_frame_address(0);
+
 #ifdef ENABLE_HWASAN
 	libc.load_hook = __hwasan_library_loaded;
 	libc.unload_hook = __hwasan_library_unloaded;

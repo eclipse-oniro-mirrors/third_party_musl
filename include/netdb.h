@@ -177,6 +177,10 @@ struct hostent *gethostbyname2(const char *, int);
 int gethostbyaddr_r(const void *, socklen_t, int, struct hostent *, char *, size_t, struct hostent **, int *);
 int getservbyport_r(int, const char *, struct servent *, char *, size_t, struct servent **);
 int getservbyname_r(const char *, const char *, struct servent *, char *, size_t, struct servent **);
+int getprotobyname_r(const char *, struct protoent *, char *, size_t, struct protoent **);
+int getprotobynumber_r(int, struct protoent *, char *, size_t, struct protoent **);
+int getprotoent_r(struct protoent *, char *, size_t, struct protoent **);
+int getservent_r(struct servent *, char *, size_t, struct servent **);
 #define EAI_NODATA     -5
 #define EAI_ADDRFAMILY -9
 #define EAI_INPROGRESS -100
