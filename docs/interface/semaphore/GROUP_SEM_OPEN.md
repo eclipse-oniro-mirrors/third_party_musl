@@ -1,4 +1,4 @@
-## GROUP_SEM_OPEN &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; OHOS Programmer's Manual
+# GROUP_SEM_OPEN &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; OHOS Programmer's Manual
 
 #### **NAME**
 
@@ -52,9 +52,7 @@ sem_t *group_sem_open(const char *name, int oflag, gid_t gid, ...);
 ​       **gid**: Application-supplied group identifier used as the directory name
 ​       under `/dev/group/shm`.
 
-​       **mode**: Required after **gid** when **O_CREAT** is specified. Only the
-​       permission bits represented by `0666` are used, and the process file
-​       creation mask applies.
+​       **mode**: Required after **gid** when **O_CREAT** is specified. The permission bits of the mode argument are used when creating a new semaphore, and the process file creation mask applies.
 
 ​       **value**: Required after **mode** when **O_CREAT** is specified. Initial
 ​       semaphore value in the range from 0 through **SEM_VALUE_MAX**.
@@ -124,6 +122,7 @@ checks. group_sem_unlink() uses the shared group_shm_unlink() diagnostic.
 
 ```c
 #include <fcntl.h>
+#include <semaphore.h>
 #include <sys/group_ipc.h>
 #include <stdio.h>
 

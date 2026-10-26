@@ -40,6 +40,10 @@ struct group  *fgetgrent(FILE *);
 int putgrent(const struct group *, FILE *);
 #endif
 
+#if defined(_GNU_SOURCE) || defined(_XOPEN_SOURCE)
+int getgrent_r(struct group *, char *, size_t, struct group **);
+#endif
+
 #if defined(_GNU_SOURCE) || defined(_BSD_SOURCE)
 int getgrouplist(const char *, gid_t, gid_t *, int *);
 int setgroups(size_t, const gid_t *);

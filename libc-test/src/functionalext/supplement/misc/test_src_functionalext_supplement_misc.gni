@@ -53,6 +53,9 @@ functionalext_supplement_misc_test = [
   "ioctl",
   "functionalext_wordfree",
   "a64l",
+  "libc_single_threaded",
+  "libc_stack_end",
+  "openat64_two",
 ]
 
 if (musl_extended_function) {

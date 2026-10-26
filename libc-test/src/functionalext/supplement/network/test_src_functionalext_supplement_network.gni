@@ -59,6 +59,10 @@ functionalext_supplement_network_test = [
   "freeaddrinfo",
   "res_querydomain",
   "dn_skipname",
+  "getprotobyname_r",
+  "getprotobynumber_r",
+  "getprotoent_r",
+  "getservent_r",
 ]
 
 if (musl_extended_function) {

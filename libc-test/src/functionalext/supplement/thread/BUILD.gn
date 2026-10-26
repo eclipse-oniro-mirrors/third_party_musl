@@ -108,6 +108,14 @@ ohos_executable("pthread_key_create_test") {
   sources = [ "pthread_key_create.c" ]
 }
 
+ohos_executable("pthread_key_exhausted_test") {
+  subsystem_name = "musl"
+  part_name = "libc-test"
+  include_dirs = default_include_dirs
+  configs = default_configs
+  sources = [ "pthread_key_exhausted.c" ]
+}
+
 ohos_executable("pthread_mutex_init_test") {
   subsystem_name = "musl"
   part_name = "libc-test"
@@ -266,6 +274,7 @@ group("functionalext_supplement_thread_test") {
     ":pthread_getschedparam_test",
     ":pthread_getspecific_test",
     ":pthread_key_create_test",
+    ":pthread_key_exhausted_test",
     ":pthread_mutex_init_test",
     ":pthread_mutex_lock_test",
     ":pthread_mutex_unlock_test",

@@ -148,6 +148,14 @@ int __openat64_chk(int fd, const char* pathname, int flags)
     }
     return __DIAGNOSE_CALL_BYPASSING_FORTIFY(openat64)(fd, pathname, __force_O_LARGEFILE(flags), 0);
 }
+
+int __openat64_2(int fd, const char* pathname, int flags)
+{
+    if (__needs_mode(flags)) {
+        __fortify_error("openat64: " OPEN_TOO_FEW_ARGS_ERROR);
+    }
+    return __DIAGNOSE_CALL_BYPASSING_FORTIFY(openat64)(fd, pathname, __force_O_LARGEFILE(flags), 0);
+}
 #endif
 
 static inline void __diagnose_pollfd_array(const char* fn, size_t fds_size, nfds_t fd_count)

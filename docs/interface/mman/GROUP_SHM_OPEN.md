@@ -93,7 +93,7 @@ int group_shm_open(const char *name, int oflag, mode_t mode, gid_t gid);
 
 When existing musl logging is enabled, a failed call logs the interface name
 and errno directly, without changing the original errno or adding permission
-checks. group_sem_unlink() uses the shared group_shm_unlink() diagnostic.
+checks.
 
 ​       The **gid** argument is supplied by the application. The function does not
 ​       require it to match the real or effective group ID of the calling process.
@@ -111,6 +111,7 @@ checks. group_sem_unlink() uses the shared group_shm_unlink() diagnostic.
 #include <fcntl.h>
 #include <stdio.h>
 #include <sys/group_ipc.h>
+#include <sys/mman.h>
 #include <unistd.h>
 
 int main(void)

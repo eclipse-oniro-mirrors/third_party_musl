@@ -83,6 +83,7 @@ functionalext_supplement_thread_test = [
   "cnd_broadcast",
   "pthread_yield",
   "pthread_setcanceltype",
+  "pthread_sigqueue",
 ]
 
 if (musl_extended_function) {

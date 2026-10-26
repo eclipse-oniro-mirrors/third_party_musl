@@ -94,7 +94,7 @@ functional_list = [
   "dlprelink",
   "dlopen_prelink",
   "dlopen_ani",
-  "appuid"
+  "appuid_func"
 ]
 
 if (musl_use_pthread_cancel) {
