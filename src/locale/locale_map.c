@@ -169,11 +169,6 @@ const struct __locale_map *__get_locale(int cat, const char *val)
 			}
 		}
 	}
-	/* Use ICU_VALID flag to indicate that other icu-related functions can use icu methods */
-	if (new->flag == ICU_VALID) {
-		/* ICU function: u_setDataDirectory, Load ICU data to memory */
-		set_icu_directory();
-	}
 #endif
 
 	/* For LC_CTYPE, never return a null pointer unless the
