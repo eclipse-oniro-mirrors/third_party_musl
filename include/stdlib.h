@@ -36,6 +36,18 @@ unsigned long strtoul (const char *__restrict, char **__restrict, int);
 long long strtoll (const char *__restrict, char **__restrict, int);
 unsigned long long strtoull (const char *__restrict, char **__restrict, int);
 
+long __isoc23_strtol (const char *__restrict, char **__restrict, int);
+unsigned long __isoc23_strtoul (const char *__restrict, char **__restrict, int);
+long long __isoc23_strtoll (const char *__restrict, char **__restrict, int);
+unsigned long long __isoc23_strtoull (const char *__restrict, char **__restrict, int);
+
+#ifdef _OHOS_ISOC23_CONVERSION_SOURCE
+__REDIR(strtol, __isoc23_strtol);
+__REDIR(strtoul, __isoc23_strtoul);
+__REDIR(strtoll, __isoc23_strtoll);
+__REDIR(strtoull, __isoc23_strtoull);
+#endif
+
 int rand (void);
 void srand (unsigned);
 
@@ -177,7 +189,15 @@ struct __locale_struct;
 float strtof_l(const char *__restrict, char **__restrict, struct __locale_struct *);
 double strtod_l(const char *__restrict, char **__restrict, struct __locale_struct *);
 long double strtold_l(const char *__restrict, char **__restrict, struct __locale_struct *);
-#ifdef MUSL_EXTERNAL_FUNCTION
+long strtol_l(const char *__restrict, char **__restrict, int, struct __locale_struct *);
+long long __isoc23_strtoll_l(const char *__restrict, char **__restrict, int, struct __locale_struct *);
+unsigned long long __isoc23_strtoull_l(const char *__restrict, char **__restrict, int, struct __locale_struct *);
+#if defined(_OHOS_ISOC23_CONVERSION_SOURCE) && !defined(__cplusplus)
+long long strtoll_l(const char *__restrict, char **__restrict, int, locale_t);
+unsigned long long strtoull_l(const char *__restrict, char **__restrict, int, locale_t);
+__REDIR(strtoll_l, __isoc23_strtoll_l);
+__REDIR(strtoull_l, __isoc23_strtoull_l);
+#elif defined(MUSL_EXTERNAL_FUNCTION)
 _LIBCPP_HIDE_FROM_ABI long long strtoll_l(const char *nptr, char **endptr, int base, locale_t loc);
 _LIBCPP_HIDE_FROM_ABI unsigned long long strtoull_l(const char *nptr, char **endptr, int base, locale_t loc);
 #endif

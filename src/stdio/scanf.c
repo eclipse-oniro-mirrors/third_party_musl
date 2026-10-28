@@ -12,3 +12,13 @@ int scanf(const char *restrict fmt, ...)
 }
 
 weak_alias(scanf,__isoc99_scanf);
+
+int __isoc23_scanf(const char *restrict fmt, ...)
+{
+	int ret;
+	va_list ap;
+	va_start(ap, fmt);
+	ret = __isoc23_vfscanf(stdin, fmt, ap);
+	va_end(ap);
+	return ret;
+}
