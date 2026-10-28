@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
 #include <stdarg.h>
 #include <ctype.h>
 #include <wchar.h>
@@ -11,13 +12,7 @@
 #include "shgetc.h"
 #include "intscan.h"
 #include "floatscan.h"
-
-#define SIZE_hh -2
-#define SIZE_h  -1
-#define SIZE_def 0
-#define SIZE_l   1
-#define SIZE_L   2
-#define SIZE_ll  3
+#include "scanf_impl.h"
 
 static void store_int(void *dest, int size, unsigned long long i)
 {
@@ -83,7 +78,28 @@ static int in_set(const wchar_t *set, int c)
 	((f)->rend && (c)<128U ? *--(f)->rpos : ungetwc((c),(f)))
 #endif
 
-int vfwscanf(FILE *restrict f, const wchar_t *restrict fmt, va_list ap)
+/* A non-null string cursor bypasses multibyte decoding of the input. */
+static int scan_getwc(FILE *f, const wchar_t **s)
+{
+	if (*s) {
+		return **s ? *(*s)++ : WEOF;
+	}
+	return getwc(f);
+}
+
+static void scan_ungetwc(int c, FILE *f, const wchar_t **s)
+{
+	if (*s) {
+		if (c != WEOF) {
+			--*s;
+		}
+	} else {
+		ungetwc(c, f);
+	}
+}
+
+int __vfwscanf(FILE *restrict f, const wchar_t *restrict fmt, va_list ap, int isoc23,
+	const wchar_t *ws)
 {
 	int width;
 	int size;
@@ -103,7 +119,9 @@ int vfwscanf(FILE *restrict f, const wchar_t *restrict fmt, va_list ap)
 
 	FLOCK(f);
 
-	fwide(f, 1);
+	if (!ws) {
+		fwide(f, 1);
+	}
 
 	for (p=fmt; *p; p++) {
 
@@ -111,19 +129,23 @@ int vfwscanf(FILE *restrict f, const wchar_t *restrict fmt, va_list ap)
 
 		if (iswspace(*p)) {
 			while (iswspace(p[1])) p++;
-			while (iswspace((c=getwc(f)))) pos++;
-			ungetwc(c, f);
+			while (iswspace((c=scan_getwc(f, &ws)))) {
+				pos++;
+			}
+			scan_ungetwc(c, f, &ws);
 			continue;
 		}
 		if (*p != '%' || p[1] == '%') {
 			if (*p == '%') {
 				p++;
-				while (iswspace((c=getwc(f)))) pos++;
+				while (iswspace((c=scan_getwc(f, &ws)))) {
+					pos++;
+				}
 			} else {
-				c = getwc(f);
+				c = scan_getwc(f, &ws);
 			}
 			if (c!=*p) {
-				ungetwc(c, f);
+				scan_ungetwc(c, f, &ws);
 				if (c<0) goto input_fail;
 				goto match_fail;
 			}
@@ -141,6 +163,9 @@ int vfwscanf(FILE *restrict f, const wchar_t *restrict fmt, va_list ap)
 		}
 
 		for (width=0; iswdigit(*p); p++) {
+			if (isoc23 && width > (INT_MAX - (*p-'0')) / 10) {
+				goto width_fail;
+			}
 			width = 10*width + *p - '0';
 		}
 
@@ -173,6 +198,43 @@ int vfwscanf(FILE *restrict f, const wchar_t *restrict fmt, va_list ap)
 		case 'L':
 			size = SIZE_L;
 			break;
+		case 'w': {
+			int fast = 0, bits = 0;
+			if (!isoc23) {
+				goto fmt_fail;
+			}
+			if (*p == 'f') {
+				fast = 1, p++;
+			}
+			if (*p < '1' || *p > '9') {
+				goto width_fail;
+			}
+			for (; *p >= '0' && *p <= '9'; p++) {
+				/* Only widths up to 64 are supported; avoid overflow. */
+				if (bits > 64) {
+					goto width_fail;
+				}
+				bits = 10*bits + *p - '0';
+			}
+			size = scanf_wsize(bits, fast);
+			if (size == SIZE_invalid) {
+				goto width_fail;
+			}
+			switch (*p) {
+			case 'b': case 'd': case 'i': case 'o':
+			case 'u': case 'x': case 'X': case 'n':
+				break;
+			default:
+				goto width_fail;
+			}
+			break;
+		}
+		case 'b':
+			if (!isoc23) {
+				goto fmt_fail;
+			}
+			p--;
+			break;
 		case 'd': case 'i': case 'o': case 'u': case 'x':
 		case 'a': case 'e': case 'f': case 'g':
 		case 'A': case 'E': case 'F': case 'G': case 'X':
@@ -194,12 +256,15 @@ int vfwscanf(FILE *restrict f, const wchar_t *restrict fmt, va_list ap)
 		}
 
 		if (t != 'n') {
-			if (t != '[' && (t|32) != 'c')
-				while (iswspace((c=getwc(f)))) pos++;
-			else
-				c=getwc(f);
+			if (t != '[' && (t|32) != 'c') {
+				while (iswspace((c=scan_getwc(f, &ws)))) {
+					pos++;
+				}
+			} else {
+				c=scan_getwc(f, &ws);
+			}
 			if (c < 0) goto input_fail;
-			ungetwc(c, f);
+			scan_ungetwc(c, f, &ws);
 		}
 
 		switch (t) {
@@ -214,7 +279,8 @@ int vfwscanf(FILE *restrict f, const wchar_t *restrict fmt, va_list ap)
 			if (t == 'c') {
 				if (width<1) width = 1;
 				invert = 1;
-				set = L"";
+				static const wchar_t empty[] = { 0 };
+				set = empty;
 			} else if (t == 's') {
 				invert = 1;
 				static const wchar_t spaces[] = {
@@ -243,8 +309,15 @@ int vfwscanf(FILE *restrict f, const wchar_t *restrict fmt, va_list ap)
 
 			i = 0;
 			if (alloc) {
-				k = t=='c' ? width+1U : 31;
+				/* Keep the legacy allocation size; C23 narrow output may
+				 * need several bytes per wide input character. */
+				k = t=='c' && (!isoc23 || size==SIZE_l) ? width+1U : 31;
 				if (size == SIZE_l) {
+					if (isoc23 && k > SIZE_MAX/sizeof(wchar_t)) {
+						wcs = 0;
+						errno = ENOMEM;
+						goto alloc_fail;
+					}
 					wcs = malloc(k*sizeof(wchar_t));
 					if (!wcs) goto alloc_fail;
 				} else {
@@ -253,12 +326,18 @@ int vfwscanf(FILE *restrict f, const wchar_t *restrict fmt, va_list ap)
 				}
 			}
 			while (width) {
-				if ((c=getwc(f))<0) break;
+				if ((c=scan_getwc(f, &ws))<0) {
+					break;
+				}
 				if (in_set(set, c) == invert)
 					break;
 				if (wcs) {
 					wcs[i++] = c;
 					if (alloc && i==k) {
+						if (isoc23 && k > (SIZE_MAX/sizeof(wchar_t)-1)/2) {
+							errno = ENOMEM;
+							goto alloc_fail;
+						}
 						k += k+1;
 						wchar_t *tmp = realloc(wcs, k*sizeof(wchar_t));
 						if (!tmp) goto alloc_fail;
@@ -269,6 +348,10 @@ int vfwscanf(FILE *restrict f, const wchar_t *restrict fmt, va_list ap)
 					if (l<0) goto input_fail;
 					i += l;
 					if (alloc && i > k-4) {
+						if (isoc23 && k > (SIZE_MAX-1)/2) {
+							errno = ENOMEM;
+							goto alloc_fail;
+						}
 						k += k+1;
 						char *tmp = realloc(s, k);
 						if (!tmp) goto alloc_fail;
@@ -280,8 +363,10 @@ int vfwscanf(FILE *restrict f, const wchar_t *restrict fmt, va_list ap)
 				gotmatch=1;
 			}
 			if (width) {
-				ungetwc(c, f);
-				if (t == 'c' || !gotmatch) goto match_fail;
+				scan_ungetwc(c, f, &ws);
+				if ((t == 'c' && !isoc23) || !gotmatch) {
+					goto match_fail;
+				}
 			}
 
 			if (alloc) {
@@ -294,6 +379,10 @@ int vfwscanf(FILE *restrict f, const wchar_t *restrict fmt, va_list ap)
 			}
 			break;
 
+		case 'b':
+			if (!isoc23) {
+				goto fmt_fail;
+			}
 		case 'd': case 'i': case 'o': case 'u': case 'x':
 		case 'a': case 'e': case 'f': case 'g':
 		case 'A': case 'E': case 'F': case 'G': case 'X':
@@ -301,12 +390,31 @@ int vfwscanf(FILE *restrict f, const wchar_t *restrict fmt, va_list ap)
 			if (width < 1) width = 0;
 			snprintf(tmp, sizeof tmp, "%.*s%.0d%s%c%%lln",
 				1+!dest, "%*", width, size_pfx[size+2], t);
+			/* The string adapter maps one wide character to one byte for
+			 * numeric parsing only; discard any previous lookahead. */
+			if (ws) {
+				f->rpos = f->rend = f->buf;
+				f->cookie = (void *)ws;
+				f->flags &= ~F_EOF;
+			}
 			cnt = 0;
-			if (fscanf(f, tmp, dest?dest:&cnt, &cnt) == -1)
+			int ret;
+			if (isoc23) {
+				long long c23_count = 0;
+				ret = __isoc23_fscanf(f, tmp, dest?dest:&c23_count, &c23_count);
+				cnt = c23_count;
+			} else {
+				ret = fscanf(f, tmp, dest?dest:&cnt, &cnt);
+			}
+			if (ret == -1) {
 				goto input_fail;
-			else if (!cnt)
+			} else if (!cnt) {
 				goto match_fail;
+			}
 			pos += cnt;
+			if (ws) {
+				ws += cnt;
+			}
 			break;
 		default:
 			goto fmt_fail;
@@ -315,6 +423,9 @@ int vfwscanf(FILE *restrict f, const wchar_t *restrict fmt, va_list ap)
 		if (dest) matches++;
 	}
 	if (0) {
+width_fail:
+		errno = EINVAL;
+		goto match_fail;
 fmt_fail:
 alloc_fail:
 input_fail:
@@ -327,6 +438,11 @@ match_fail:
 	}
 	FUNLOCK(f);
 	return matches;
+}
+
+int vfwscanf(FILE *restrict f, const wchar_t *restrict fmt, va_list ap)
+{
+	return __vfwscanf(f, fmt, ap, 0, 0);
 }
 
 weak_alias(vfwscanf,__isoc99_vfwscanf);
