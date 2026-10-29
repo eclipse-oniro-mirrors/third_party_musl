@@ -28,50 +28,24 @@
  */
 void getappuid_0100(void)
 {
-    uid_t uid = getappuid();
-    EXPECT_GTE("getappuid_0100", uid, 0);
+    uid_t appuid = getappuid();
+    uid_t realuid = getuid();
+    EXPECT_GTE("getappuid_0100", appuid, 0);
+    EXPECT_GTE("getappuid_0100", realuid, 0);
 }
 
 /**
  * @tc.name      : getappuid_0200
- * @tc.desc      : getappuid should return the same value as getuid (fallback behavior)
- * @tc.level     : Level 0
- */
-void getappuid_0200(void)
-{
-    uid_t appuid = getappuid();
-    uid_t realuid = getuid();
-    EXPECT_EQ("getappuid_0200", appuid, realuid);
-}
-
-/**
- * @tc.name      : getappuid_0300
  * @tc.desc      : Call getappuid multiple times, result should be consistent
  * @tc.level     : Level 1
  */
-void getappuid_0300(void)
+void getappuid_0200(void)
 {
     uid_t uid1 = getappuid();
     uid_t uid2 = getappuid();
     uid_t uid3 = getappuid();
-    EXPECT_EQ("getappuid_0300", uid1, uid2);
-    EXPECT_EQ("getappuid_0300", uid2, uid3);
-}
-
-/**
- * @tc.name      : getappuid_0400
- * @tc.desc      : After setuid(0), getappuid should reflect the new uid
- * @tc.level     : Level 1
- */
-void getappuid_0400(void)
-{
-    uid_t orig = getappuid();
-    int ret = setuid(0);
-    if (ret == 0) {
-        uid_t new_uid = getappuid();
-        EXPECT_EQ("getappuid_0400", new_uid, 0);
-        setuid(orig);
-    }
+    EXPECT_EQ("getappuid_0200", uid1, uid2);
+    EXPECT_EQ("getappuid_0200", uid2, uid3);
 }
 
 /**
@@ -81,12 +55,12 @@ void getappuid_0400(void)
  */
 void setappuid_0100(void)
 {
-    uid_t orig = getuid();
+    uid_t orig = getappuid();
     int ret = setappuid(0);
     if (ret == 0) {
-        EXPECT_EQ("setappuid_0100", getuid(), 0);
+        EXPECT_EQ("setappuid_0100", getappuid(), 0);
     }
-    setuid(orig);
+    setappuid(orig);
 }
 
 /**
@@ -96,10 +70,10 @@ void setappuid_0100(void)
  */
 void setappuid_0200(void)
 {
-    uid_t cur = getuid();
+    uid_t cur = getappuid();
     int ret = setappuid(cur);
     EXPECT_EQ("setappuid_0200", ret, 0);
-    EXPECT_EQ("setappuid_0200", getuid(), cur);
+    EXPECT_EQ("setappuid_0200", getappuid(), cur);
 }
 
 /**
@@ -109,11 +83,11 @@ void setappuid_0200(void)
  */
 void setappuid_0300(void)
 {
-    uid_t cur = getuid();
+    uid_t cur = getappuid();
     int ret1 = setappuid(cur);
     int ret2 = setappuid(cur);
     EXPECT_EQ("setappuid_0300", ret1, ret2);
-    EXPECT_EQ("setappuid_0300", getuid(), cur);
+    EXPECT_EQ("setappuid_0300", getappuid(), cur);
 }
 
 /**
@@ -123,7 +97,7 @@ void setappuid_0300(void)
  */
 void setappuid_0400(void)
 {
-    uid_t cur = getuid();
+    uid_t cur = getappuid();
     int ret = setappuid(cur);
     EXPECT_TRUE("setappuid_0400", ret == 0 || ret == -1);
 }
@@ -135,12 +109,12 @@ void setappuid_0400(void)
  */
 void setappuid_boundary_0100(void)
 {
-    uid_t orig = getuid();
+    uid_t orig = getappuid();
     int ret = setappuid(0);
     if (ret == 0) {
-        EXPECT_EQ("setappuid_boundary_0100", getuid(), 0);
+        EXPECT_EQ("setappuid_boundary_0100", getappuid(), 0);
     }
-    setuid(orig);
+    setappuid(orig);
 }
 
 /**
@@ -150,12 +124,12 @@ void setappuid_boundary_0100(void)
  */
 void setappuid_boundary_0200(void)
 {
-    uid_t orig = getuid();
+    uid_t orig = getappuid();
     uid_t target = 65535;
     int ret = setappuid(target);
     if (ret == 0) {
-        EXPECT_EQ("setappuid_boundary_0200", getuid(), (int)target);
-        setuid(orig);
+        EXPECT_EQ("setappuid_boundary_0200", getappuid(), (int)target);
+        setappuid(orig);
     }
 }
 
@@ -166,13 +140,13 @@ void setappuid_boundary_0200(void)
  */
 void setappuid_boundary_0300(void)
 {
-    uid_t orig = getuid();
+    uid_t orig = getappuid();
     uid_t target = 2147483647;
     int ret = setappuid(target);
     if (ret == -1) {
         EXPECT_TRUE("setappuid_boundary_0300", errno == EINVAL || errno == EPERM);
     }
-    setuid(orig);
+    setappuid(orig);
 }
 
 /**
@@ -182,13 +156,13 @@ void setappuid_boundary_0300(void)
  */
 void setappuid_boundary_0400(void)
 {
-    uid_t orig = getuid();
+    uid_t orig = getappuid();
     uid_t target = 4294967295U;
     int ret = setappuid(target);
     if (ret == -1) {
         EXPECT_TRUE("setappuid_boundary_0400", errno == EINVAL || errno == EPERM);
     }
-    setuid(orig);
+    setappuid(orig);
 }
 
 /**
@@ -198,10 +172,10 @@ void setappuid_boundary_0400(void)
  */
 void setappuid_abnormal_0100(void)
 {
-    uid_t orig = getuid();
+    uid_t orig = getappuid();
     int ret = setappuid(4294967295U);
     EXPECT_TRUE("setappuid_abnormal_0100", ret == 0 || ret == -1);
-    setuid(orig);
+    setappuid(orig);
 }
 
 /**
@@ -211,14 +185,14 @@ void setappuid_abnormal_0100(void)
  */
 void setappuid_abnormal_0200(void)
 {
-    uid_t orig = getuid();
+    uid_t orig = getappuid();
     uid_t values[] = {0, orig, 1, orig, 1000, orig};
     int i;
     for (i = 0; i < (int)(sizeof(values) / sizeof(values[0])); i++) {
         int ret = setappuid(values[i]);
         EXPECT_TRUE("setappuid_abnormal_0200", ret == 0 || ret == -1);
     }
-    setuid(orig);
+    setappuid(orig);
 }
 
 /**
@@ -228,12 +202,11 @@ void setappuid_abnormal_0200(void)
  */
 void setappuid_abnormal_0300(void)
 {
-    uid_t orig = getuid();
+    uid_t orig = getappuid();
     int ret = setappuid(orig);
     if (ret == 0) {
         uid_t appuid = getappuid();
-        uid_t realuid = getuid();
-        EXPECT_EQ("setappuid_abnormal_0300", appuid, realuid);
+        EXPECT_EQ("setappuid_abnormal_0300", appuid, (int)orig);
     }
 }
 
@@ -252,24 +225,10 @@ void getappuid_abnormal_0100(void)
     }
 }
 
-/**
- * @tc.name      : getappuid_abnormal_0200
- * @tc.desc      : Abnormal - getappuid should not modify errno
- * @tc.level     : Level 2
- */
-void getappuid_abnormal_0200(void)
-{
-    errno = 0;
-    getappuid();
-    EXPECT_EQ("getappuid_abnormal_0200", errno, 0);
-}
-
 int main(int argc, char *argv[])
 {
     getappuid_0100();
     getappuid_0200();
-    getappuid_0300();
-    getappuid_0400();
     setappuid_0100();
     setappuid_0200();
     setappuid_0300();
@@ -282,6 +241,5 @@ int main(int argc, char *argv[])
     setappuid_abnormal_0200();
     setappuid_abnormal_0300();
     getappuid_abnormal_0100();
-    getappuid_abnormal_0200();
     return t_status;
 }

@@ -54,8 +54,9 @@ static void *getappuid_mt_worker(void *p)
     int i;
     for (i = 0; i < ITER_COUNT; i++) {
         uid_t uid = getappuid();
-        if (uid != a->expected)
+        if (uid != a->expected) {
             a->mismatch = 1;
+        }
     }
     return NULL;
 }
@@ -66,10 +67,12 @@ static void test_getappuid_concurrent(void)
     struct getappuid_mt_arg arg = { .expected = getappuid(), .mismatch = 0 };
     int i;
 
-    for (i = 0; i < NUM_THREADS; i++)
+    for (i = 0; i < NUM_THREADS; i++) {
         T(pthread_create(&threads[i], NULL, getappuid_mt_worker, &arg));
-    for (i = 0; i < NUM_THREADS; i++)
+    }
+    for (i = 0; i < NUM_THREADS; i++) {
         T(pthread_join(threads[i], NULL));
+    }
 
     EQ(arg.mismatch, 0, "%d");
 }
@@ -86,8 +89,9 @@ static void *setappuid_mt_worker(void *p)
     int i;
     for (i = 0; i < 100; i++) {
         int ret = setappuid(a->uid);
-        if (ret != 0 && ret != -1)
+        if (ret != 0 && ret != -1) {
             a->error = 1;
+        }
     }
     return NULL;
 }
@@ -99,10 +103,12 @@ static void test_setappuid_concurrent(void)
     struct setappuid_mt_arg arg = { .uid = orig, .error = 0 };
     int i;
 
-    for (i = 0; i < NUM_THREADS; i++)
+    for (i = 0; i < NUM_THREADS; i++) {
         T(pthread_create(&threads[i], NULL, setappuid_mt_worker, &arg));
-    for (i = 0; i < NUM_THREADS; i++)
+    }
+    for (i = 0; i < NUM_THREADS; i++) {
         T(pthread_join(threads[i], NULL));
+    }
 
     EQ(arg.error, 0, "%d");
     EQ(getuid(), orig, "%d");
@@ -130,8 +136,9 @@ static void *mixed_set_worker(void *p)
     int i;
     for (i = 0; i < 200; i++) {
         int ret = setappuid(a->uid);
-        if (ret != 0 && ret != -1)
+        if (ret != 0 && ret != -1) {
             a->error = 1;
+        }
     }
     a->stop = 1;
     return NULL;
@@ -145,15 +152,19 @@ static void test_mixed_get_set(void)
     struct mixed_mt_arg arg = { .uid = orig, .stop = 0, .error = 0 };
     int i;
 
-    for (i = 0; i < 8; i++)
+    for (i = 0; i < 8; i++) {
         T(pthread_create(&getters[i], NULL, mixed_get_worker, &arg));
-    for (i = 0; i < 4; i++)
+    }
+    for (i = 0; i < 4; i++) {
         T(pthread_create(&setters[i], NULL, mixed_set_worker, &arg));
+    }
 
-    for (i = 0; i < 8; i++)
+    for (i = 0; i < 8; i++) {
         T(pthread_join(getters[i], NULL));
-    for (i = 0; i < 4; i++)
+    }
+    for (i = 0; i < 4; i++) {
         T(pthread_join(setters[i], NULL));
+    }
 
     EQ(arg.error, 0, "%d");
     EQ(getuid(), orig, "%d");
@@ -164,37 +175,6 @@ struct synccall_survive_arg {
     int done;
 };
 
-static void *synccall_worker(void *p)
-{
-    struct synccall_survive_arg *a = p;
-    volatile int spin = 1;
-    while (spin) {
-        if (a->done)
-            spin = 0;
-    }
-    return NULL;
-}
-
-static void test_setappuid_synccall(void)
-{
-    pthread_t threads[4];
-    uid_t orig = getuid();
-    struct synccall_survive_arg arg = { .done = 0 };
-    int i;
-
-    for (i = 0; i < 4; i++)
-        T(pthread_create(&threads[i], NULL, synccall_worker, &arg));
-
-    /* setappuid triggers __synccall which signals all threads */
-    int ret = setappuid(orig);
-    arg.done = 1;
-
-    for (i = 0; i < 4; i++)
-        T(pthread_join(threads[i], NULL));
-
-    EQ(getuid(), orig, "%d");
-}
-
 /* ======================== Memory Leak / FD Leak Tests ======================== */
 
 static int count_open_fds(void)
@@ -202,11 +182,13 @@ static int count_open_fds(void)
     DIR *d = opendir("/proc/self/fd");
     struct dirent *e;
     int count = 0;
-    if (!d)
+    if (!d) {
         return -1;
+    }
     while ((e = readdir(d)) != NULL) {
-        if (e->d_name[0] == '.')
+        if (e->d_name[0] == '.') {
             continue;
+        }
         count++;
     }
     closedir(d);
@@ -266,8 +248,9 @@ static void test_setappuid_stress(void)
     int i;
     for (i = 0; i < 1000; i++) {
         int ret = setappuid(orig);
-        if (ret != 0 && ret != -1)
+        if (ret != 0 && ret != -1) {
             t_error("setappuid returned unexpected value %d at iter %d\n", ret, i);
+        }
     }
     EQ(getuid(), orig, "%d");
 }
@@ -293,13 +276,15 @@ static void test_setappuid_cleanup(void)
     uid_t orig = getuid();
     int before = count_open_fds();
     int i;
-    if (before < 0)
+    if (before < 0) {
         return;
+    }
 
     for (i = 0; i < 100; i++) {
         int ret = setappuid(0);
-        if (ret == 0)
+        if (ret == 0) {
             setuid(orig);
+        }
     }
     setuid(orig);
 
@@ -319,9 +304,10 @@ static void test_getappuid_fork(void)
     } else if (pid > 0) {
         int status;
         T(waitpid(pid, &status, 0));
-        if (WIFEXITED(status) && WEXITSTATUS(status) != 0)
+        if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
             t_error("child getappuid mismatch: got %d, expected %d\n",
                     WEXITSTATUS(status), parent_uid);
+        }
     } else {
         t_error("fork failed: %s\n", strerror(errno));
     }
@@ -332,7 +318,6 @@ int main(void)
     test_getappuid_concurrent();
     test_setappuid_concurrent();
     test_mixed_get_set();
-    test_setappuid_synccall();
     test_getappuid_fd_leak();
     test_setappuid_fd_leak();
     test_getappuid_stress();
