@@ -8,6 +8,34 @@ https://gitcode.com/openharmony/third_party_musl/blob/master/libc.map.txt
 https://gitcode.com/openharmony/interface_sdk_c/blob/master/third_party/musl/ndk_script/adapter/libc.ndk.json
 
 ## 系统侧libc新的变化
+2026/10/24 <sys/single_threaded.h>
+- 新增`__libc_single_threaded`: 全局变量，标识当前进程是否为单线程状态，供库内部优化和并发控制使用
+
+2026/10/24 <unistd.h>
+- 新增`close_range`: 批量关闭指定范围内的文件描述符
+- 新增`closefrom`: 关闭从指定文件描述符开始的所有已打开文件描述符
+- 新增`group_member`: 判断指定GID是否为当前进程的有效组或附加组之一
+- 新增`__getpagesize`: 获取系统内存页大小（字节）
+
+2026/10/24 <fcntl.h>
+- 新增`__openat64_2`: openat函数的fortify检查辅助接口，用于在缺少mode参数时拦截O_CREAT或O_TMPFILE等非法调用
+
+2026/10/24 <netdb.h>
+- 新增`getprotoent_r`: 协议表遍历的可重入接口
+- 新增`getprotobyname_r`: 按协议名称查询协议信息的可重入接口
+- 新增`getprotobynumber_r`: 按协议号查询协议信息的可重入接口
+- 新增`getservent_r`: 服务表遍历的可重入接口
+
+2026/10/24 <grp.h>
+- 新增`getgrent_r`: 组表遍历的可重入接口
+
+2026/10/24 <pwd.h>
+- 新增`getpwent_r`: 密码表遍历的可重入接口
+- 新增`fgetpwent_r`: 从指定FILE流读取密码表项的可重入接口
+
+2026/10/24 <signal.h>
+- 新增`pthread_sigqueue`: 向指定线程发送排队信号，支持携带附带的sigqueue数据
+
 2026/5/14 <wchar.h>
 - 新增`wcstof_l`: 将宽字符字符串转换为float类型数值，当前locale参数仅用于兼容并不参与解析
 - 新增`wcstold_l`: 将宽字符字符串转换为long double类型数值，当前locale参数仅用于兼容并不参与解析

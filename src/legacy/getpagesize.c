@@ -7,4 +7,7 @@ int __getpagesize(void)
 	return PAGE_SIZE;
 }
 
-weak_alias(__getpagesize, getpagesize);
+int getpagesize(void)
+{
+	return PAGE_SIZE;
+}

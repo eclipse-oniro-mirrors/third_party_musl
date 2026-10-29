@@ -64,24 +64,6 @@ static int servent_resolv()
 	return 0;
 }
 
-static int ensure_sd_open(void)
-{
-	if (sd == NULL) {
-		if ((sd = malloc(sizeof(struct servdata))) == NULL) {
-			return ENOMEM;
-		}
-		sd->servf = NULL;
-		sd->stayopen = 0;
-	}
-	if (!sd->servf && !(sd->servf = fopen(SERV_FILE_PATH, "r"))) {
-		free(sd);
-		sd = NULL;
-		return ENOENT;
-	}
-
-	return 0;
-}
-
 static int fill_servent_buf(const char *name, const char *proto,
 	int port, char **aliases_raw, int naliases,
 	struct servent *se, char *buf, size_t buflen)
@@ -206,11 +188,21 @@ int getservent_r(struct servent *se, char *buf, size_t buflen,
 
 	*result = NULL;
 	LOCK(serv_lock);
-	rv = ensure_sd_open();
-	if (rv) {
-		errno = rv;
+	if (sd == NULL) {
+		if ((sd = malloc(sizeof(struct servdata))) == NULL) {
+			errno = ENOMEM;
+			UNLOCK(serv_lock);
+			return ENOMEM;
+		}
+		sd->servf = NULL;
+		sd->stayopen = 0;
+	}
+	if (!sd->servf && !(sd->servf = fopen(SERV_FILE_PATH, "r"))) {
+		free(sd);
+		sd = NULL;
+		errno = ENOENT;
 		UNLOCK(serv_lock);
-		return rv;
+		return ENOENT;
 	}
 
 	for (;;) {
