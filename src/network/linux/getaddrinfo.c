@@ -311,7 +311,10 @@ int getaddrinfo_custom(const char* host, const char* serv, const struct addrinfo
 		if (ret == 0) {
 			return ret;
 		}
-		return predefined_host_lookup_ip(host, serv, hints, res);
+		++customrecursive;
+		ret = predefined_host_lookup_ip(host, serv, hints, res);
+		--customrecursive;
+		return ret;
 	}
 	return ret;
 }
