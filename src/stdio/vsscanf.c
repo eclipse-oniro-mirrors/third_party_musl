@@ -18,15 +18,4 @@ int vsscanf(const char *restrict s, const char *restrict fmt, va_list ap)
 	return vfscanf(&f, fmt, ap);
 }
 
-int __isoc23_vsscanf(const char *restrict s, const char *restrict fmt, va_list ap)
-{
-	size_t s_len = strlen(s);
-	FILE f = {
-		.buf = (void *)s, .cookie = (void *)s,
-		.read = string_read, .lock = -1,
-		.buf_size = s_len, .rpos = (unsigned char *)s, .rend = (unsigned char *)(s + s_len),
-	};
-	return __isoc23_vfscanf(&f, fmt, ap);
-}
-
 weak_alias(vsscanf,__isoc99_vsscanf);

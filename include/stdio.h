@@ -134,20 +134,6 @@ int vscanf(const char *__restrict, __isoc_va_list);
 int vfscanf(FILE *__restrict, const char *__restrict, __isoc_va_list);
 int vsscanf(const char *__restrict, const char *__restrict, __isoc_va_list);
 
-int __isoc23_scanf(const char *__restrict, ...);
-int __isoc23_fscanf(FILE *__restrict, const char *__restrict, ...);
-int __isoc23_sscanf(const char *__restrict, const char *__restrict, ...);
-int __isoc23_vfscanf(FILE *__restrict, const char *__restrict, __isoc_va_list);
-int __isoc23_vsscanf(const char *__restrict, const char *__restrict, __isoc_va_list);
-
-#ifdef _OHOS_ISOC23_CONVERSION_SOURCE
-__REDIR(scanf, __isoc23_scanf);
-__REDIR(fscanf, __isoc23_fscanf);
-__REDIR(sscanf, __isoc23_sscanf);
-__REDIR(vfscanf, __isoc23_vfscanf);
-__REDIR(vsscanf, __isoc23_vsscanf);
-#endif
-
 void perror(const char *);
 
 int setvbuf(FILE *__restrict, char *__restrict, int, size_t);

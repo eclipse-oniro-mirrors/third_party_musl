@@ -3,9 +3,6 @@
 
 #include "../../include/features.h"
 
-/* Keep the legacy entry points when building libc itself. */
-#undef _OHOS_ISOC23_CONVERSION_SOURCE
-
 #define weak __attribute__((__weak__))
 #define hidden __attribute__((__visibility__("hidden")))
 #define weak_alias(old, new) \
