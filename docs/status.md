@@ -8,6 +8,37 @@ https://gitcode.com/openharmony/third_party_musl/blob/master/libc.map.txt
 https://gitcode.com/openharmony/interface_sdk_c/blob/master/third_party/musl/ndk_script/adapter/libc.ndk.json
 
 ## 系统侧libc新的变化
+2026/10/31 <stdlib.h>
+- 新增`__isoc23_strtol`: 将字符串转换为long，支持C23二进制前缀
+- 新增`__isoc23_strtoul`: 将字符串转换为unsigned long，支持C23二进制前缀
+- 新增`__isoc23_strtoll`: 将字符串转换为long long，支持C23二进制前缀
+- 新增`__isoc23_strtoull`: 将字符串转换为unsigned long long，支持C23二进制前缀
+- 新增`__isoc23_strtoll_l`: 带locale参数的C23 long long转换入口，当前实现忽略locale参数
+- 新增`__isoc23_strtoull_l`: 带locale参数的C23 unsigned long long转换入口，当前实现忽略locale参数
+- 新增`strtol_l`: 带locale参数的long转换入口，当前实现忽略locale参数，保持旧解析行为，不识别二进制前缀
+
+2026/10/31 <inttypes.h>
+- 新增`__isoc23_strtoimax`: 将字符串转换为intmax_t，支持C23二进制前缀
+- 新增`__isoc23_strtoumax`: 将字符串转换为uintmax_t，支持C23二进制前缀
+- 新增`SCNb*`格式宏：为对应无符号整数类型提供二进制扫描格式，需配合支持该格式的C23扫描入口使用
+
+2026/10/31 <wchar.h>
+- 新增`__isoc23_wcstol`: 将宽字符字符串转换为long，支持C23二进制前缀
+- 新增`__isoc23_wcstoul`: 将宽字符字符串转换为unsigned long，支持C23二进制前缀
+- 新增`__isoc23_wcstoll`: 将宽字符字符串转换为long long，支持C23二进制前缀
+- 新增`__isoc23_wcstoull`: 将宽字符字符串转换为unsigned long long，支持C23二进制前缀
+- 新增`__isoc23_swscanf`: 从宽字符字符串读取格式化输入，支持C23扫描扩展
+
+2026/10/31 <stdio.h>
+- 新增`__isoc23_scanf`: 从标准输入读取格式化输入，支持C23扫描扩展
+- 新增`__isoc23_fscanf`: 从指定流读取格式化输入，支持C23扫描扩展
+- 新增`__isoc23_sscanf`: 从字符串读取格式化输入，支持C23扫描扩展
+- 新增`__isoc23_vfscanf`: 使用va_list从指定流读取格式化输入，支持C23扫描扩展
+- 新增`__isoc23_vsscanf`: 使用va_list从字符串读取格式化输入，支持C23扫描扩展
+
+2026/10/31 导出变量（无公共头文件声明）
+- 新增`__libc_stack_end`: 记录进程启动阶段栈地址的兼容性变量，可用于近似定位主线程栈的高地址端，不代表精确的栈边界
+
 2026/10/24 <sys/single_threaded.h>
 - 新增`__libc_single_threaded`: 全局变量，标识当前进程是否为单线程状态，供库内部优化和并发控制使用
 

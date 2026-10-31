@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <ctype.h>
 #include "shgetc.h"
+#include "intscan.h"
 
 /* Lookup table for digit values. -1==255>=36 -> invalid */
 static const unsigned char table[] = { -1,
@@ -23,7 +24,8 @@ static const unsigned char table[] = { -1,
 -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
 };
 
-unsigned long long __intscan(FILE *f, unsigned base, int pok, unsigned long long lim)
+static unsigned long long intscan(FILE *f, unsigned base, int pok,
+	unsigned long long lim, int bin_prefix)
 {
 	const unsigned char *val = table+1;
 	int c, neg=0;
@@ -38,9 +40,9 @@ unsigned long long __intscan(FILE *f, unsigned base, int pok, unsigned long long
 		neg = -(c=='-');
 		c = shgetc(f);
 	}
-	if ((base == 0 || base == 16) && c=='0') {
+	if (c=='0') {
 		c = shgetc(f);
-		if ((c|32)=='x') {
+		if ((base == 0 || base == 16) && (c|32)=='x') {
 			c = shgetc(f);
 			if (val[c]>=16) {
 				shunget(f);
@@ -49,6 +51,18 @@ unsigned long long __intscan(FILE *f, unsigned base, int pok, unsigned long long
 				return 0;
 			}
 			base = 16;
+		} else if (bin_prefix && (base == 0 || base == 2) && (c|32)=='b') {
+			c = shgetc(f);
+			if (val[c]>=2) {
+				shunget(f);
+				if (pok) {
+					shunget(f);
+				} else {
+					shlim(f, 0);
+				}
+				return 0;
+			}
+			base = 2;
 		} else if (base == 0) {
 			base = 8;
 		}
@@ -97,4 +111,14 @@ done:
 		}
 	}
 	return (y^neg)-neg;
+}
+
+unsigned long long __intscan(FILE *f, unsigned base, int pok, unsigned long long lim, int bin_prefix)
+{
+	return intscan(f, base, pok, lim, bin_prefix);
+}
+
+unsigned long long __intscan_c23(FILE *f, unsigned base, unsigned long long lim)
+{
+	return intscan(f, base, 0, lim, 1);
 }
