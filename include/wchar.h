@@ -106,18 +106,6 @@ unsigned long wcstoul (const wchar_t *__restrict, wchar_t **__restrict, int);
 long long wcstoll (const wchar_t *__restrict, wchar_t **__restrict, int);
 unsigned long long wcstoull (const wchar_t *__restrict, wchar_t **__restrict, int);
 
-long __isoc23_wcstol (const wchar_t *__restrict, wchar_t **__restrict, int);
-unsigned long __isoc23_wcstoul (const wchar_t *__restrict, wchar_t **__restrict, int);
-long long __isoc23_wcstoll (const wchar_t *__restrict, wchar_t **__restrict, int);
-unsigned long long __isoc23_wcstoull (const wchar_t *__restrict, wchar_t **__restrict, int);
-
-#ifdef _OHOS_ISOC23_CONVERSION_SOURCE
-__REDIR(wcstol, __isoc23_wcstol);
-__REDIR(wcstoul, __isoc23_wcstoul);
-__REDIR(wcstoll, __isoc23_wcstoll);
-__REDIR(wcstoull, __isoc23_wcstoull);
-#endif
-
 
 
 int fwide (FILE *, int);
@@ -134,10 +122,6 @@ int vswprintf (wchar_t *__restrict, size_t, const wchar_t *__restrict, __isoc_va
 int wscanf (const wchar_t *__restrict, ...);
 int fwscanf (FILE *__restrict, const wchar_t *__restrict, ...);
 int swscanf (const wchar_t *__restrict, const wchar_t *__restrict, ...);
-int __isoc23_swscanf (const wchar_t *__restrict, const wchar_t *__restrict, ...);
-#ifdef _OHOS_ISOC23_CONVERSION_SOURCE
-__REDIR(swscanf, __isoc23_swscanf);
-#endif
 
 int vwscanf (const wchar_t *__restrict, __isoc_va_list);
 int vfwscanf (FILE *__restrict, const wchar_t *__restrict, __isoc_va_list);

@@ -29,7 +29,7 @@ static size_t do_read(FILE *f, unsigned char *buf, size_t len)
 	return 0;
 }
 
-static unsigned long long wcstox(const wchar_t *s, wchar_t **p, int base, unsigned long long lim, int bin_prefix)
+static unsigned long long wcstox(const wchar_t *s, wchar_t **p, int base, unsigned long long lim)
 {
 	wchar_t *t = (wchar_t *)s;
 	unsigned char buf[64];
@@ -42,7 +42,7 @@ static unsigned long long wcstox(const wchar_t *s, wchar_t **p, int base, unsign
 	while (iswspace(*t)) t++;
 	f.cookie = (void *)t;
 	shlim(&f, 0);
-	unsigned long long y = __intscan(&f, base, 1, lim, bin_prefix);
+	unsigned long long y = __intscan(&f, base, 1, lim);
 	if (p) {
 		size_t cnt = shcnt(&f);
 		*p = cnt ? t + cnt : (wchar_t *)s;
@@ -52,42 +52,22 @@ static unsigned long long wcstox(const wchar_t *s, wchar_t **p, int base, unsign
 
 unsigned long long wcstoull(const wchar_t *restrict s, wchar_t **restrict p, int base)
 {
-	return wcstox(s, p, base, ULLONG_MAX, 0);
+	return wcstox(s, p, base, ULLONG_MAX);
 }
 
 long long wcstoll(const wchar_t *restrict s, wchar_t **restrict p, int base)
 {
-	return wcstox(s, p, base, LLONG_MIN, 0);
+	return wcstox(s, p, base, LLONG_MIN);
 }
 
 unsigned long wcstoul(const wchar_t *restrict s, wchar_t **restrict p, int base)
 {
-	return wcstox(s, p, base, ULONG_MAX, 0);
+	return wcstox(s, p, base, ULONG_MAX);
 }
 
 long wcstol(const wchar_t *restrict s, wchar_t **restrict p, int base)
 {
-	return wcstox(s, p, base, 0UL+LONG_MIN, 0);
-}
-
-long __isoc23_wcstol(const wchar_t *restrict s, wchar_t **restrict p, int base)
-{
-	return wcstox(s, p, base, 0UL+LONG_MIN, 1);
-}
-
-unsigned long __isoc23_wcstoul(const wchar_t *restrict s, wchar_t **restrict p, int base)
-{
-	return wcstox(s, p, base, ULONG_MAX, 1);
-}
-
-long long __isoc23_wcstoll(const wchar_t *restrict s, wchar_t **restrict p, int base)
-{
-	return wcstox(s, p, base, LLONG_MIN, 1);
-}
-
-unsigned long long __isoc23_wcstoull(const wchar_t *restrict s, wchar_t **restrict p, int base)
-{
-	return wcstox(s, p, base, ULLONG_MAX, 1);
+	return wcstox(s, p, base, 0UL+LONG_MIN);
 }
 
 intmax_t wcstoimax(const wchar_t *restrict s, wchar_t **restrict p, int base)

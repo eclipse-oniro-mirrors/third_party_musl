@@ -11,8 +11,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import("../../../../../musl_config.gni")
-
 functionalext_supplement_stdlib_test = [
   "imaxabs",
   "imaxdiv",
@@ -34,8 +32,4 @@ functionalext_supplement_stdlib_test = [
   "bsearch",
   "qsort_r",
   "functionalext_fcvt",
-  "isoc23_strtol",
-  "isoc23_strtol_l",
-  "isoc23_strto_redirect",
-  "isoc23_wcstol",
 ]

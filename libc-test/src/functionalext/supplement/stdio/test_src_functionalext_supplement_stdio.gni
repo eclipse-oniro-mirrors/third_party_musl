@@ -95,11 +95,6 @@ functionalext_supplement_stdio_test = [
   "fputc",
   "fputs",
   "fgetln",
-  "isoc23_scanf_binary",
-  "isoc23_redirect",
-  "isoc23_scanf_width",
-  "isoc23_scanf_posix",
-  "isoc23_scanf_compat",
 ]
 
 if (musl_extended_function) {

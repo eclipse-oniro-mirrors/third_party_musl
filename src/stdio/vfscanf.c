@@ -1,5 +1,4 @@
 #include <stdlib.h>
-#include <errno.h>
 #include <stdarg.h>
 #include <ctype.h>
 #include <wchar.h>
@@ -12,8 +11,13 @@
 #include "shgetc.h"
 #include "intscan.h"
 #include "floatscan.h"
-#include "scanf_impl.h"
 
+#define SIZE_hh -2
+#define SIZE_h  -1
+#define SIZE_def 0
+#define SIZE_l   1
+#define SIZE_L   2
+#define SIZE_ll  3
 #define BUF_LEN 513
 
 #if (defined(MUSL_AARCH64_ARCH)) || (defined(MUSL_ARM_ARCH))
@@ -54,7 +58,7 @@ static void *arg_n(va_list ap, unsigned int n)
 	return p;
 }
 
-static int vfscanf_internal(FILE *restrict f, const char *restrict fmt, va_list ap, int isoc23)
+int vfscanf(FILE *restrict f, const char *restrict fmt, va_list ap)
 {
 #if (defined(MUSL_AARCH64_ARCH)) || (defined(MUSL_ARM_ARCH))
 	char buf[BUF_LEN];
@@ -66,7 +70,6 @@ static int vfscanf_internal(FILE *restrict f, const char *restrict fmt, va_list 
 	int base;
 	const unsigned char *p;
 	int c, t;
-	int saved_errno;
 	char *s;
 	wchar_t *wcs;
 	mbstate_t st;
@@ -124,9 +127,6 @@ static int vfscanf_internal(FILE *restrict f, const char *restrict fmt, va_list 
 		}
 
 		for (width=0; isdigit(*p); p++) {
-			if (isoc23 && width > (INT_MAX - (*p-'0')) / 10) {
-				goto width_fail;
-			}
 			width = 10*width + *p - '0';
 		}
 
@@ -158,43 +158,6 @@ static int vfscanf_internal(FILE *restrict f, const char *restrict fmt, va_list 
 			break;
 		case 'L':
 			size = SIZE_L;
-			break;
-		case 'w': {
-			int fast = 0, bits = 0;
-			if (!isoc23) {
-				goto fmt_fail;
-			}
-			if (*p == 'f') {
-				fast = 1, p++;
-			}
-			if (*p < '1' || *p > '9') {
-				goto width_fail;
-			}
-			for (; *p >= '0' && *p <= '9'; p++) {
-				/* Only widths up to 64 are supported; avoid overflow. */
-				if (bits > 64) {
-					goto width_fail;
-				}
-				bits = 10*bits + *p - '0';
-			}
-			size = scanf_wsize(bits, fast);
-			if (size == SIZE_invalid) {
-				goto width_fail;
-			}
-			switch (*p) {
-			case 'b': case 'd': case 'i': case 'o':
-			case 'u': case 'x': case 'X': case 'n':
-				break;
-			default:
-				goto width_fail;
-			}
-			break;
-		}
-		case 'b':
-			if (!isoc23) {
-				goto fmt_fail;
-			}
-			p--;
 			break;
 		case 'd': case 'i': case 'o': case 'u': case 'x':
 		case 'a': case 'e': case 'f': case 'g':
@@ -232,8 +195,7 @@ static int vfscanf_internal(FILE *restrict f, const char *restrict fmt, va_list 
 			pos += shcnt(f);
 		}
 
-		/* Only the C23 path counts wide output characters instead of bytes. */
-		shlim(f, isoc23 && size == SIZE_l && (t == 'c' || t == 's' || t == '[') ? 0 : width);
+		shlim(f, width);
 		if (shgetc(f) < 0) goto input_fail;
 		shunget(f);
 
@@ -273,66 +235,37 @@ static int vfscanf_internal(FILE *restrict f, const char *restrict fmt, va_list 
 			k = t=='c' ? width+1U : 31;
 			if (size == SIZE_l) {
 				if (alloc) {
-					if (isoc23 && k > SIZE_MAX/sizeof(wchar_t)) {
-						errno = ENOMEM;
-						goto alloc_fail;
-					}
 					wcs = malloc(k*sizeof(wchar_t));
-					if (!wcs) {
-						goto alloc_fail;
-					}
+					if (!wcs) goto alloc_fail;
 				} else {
 					wcs = dest;
 				}
 				st = (mbstate_t){0};
-				while ((!isoc23 || !width || i < width) && scanset[(c=shgetc(f))+1]) {
+				while (scanset[(c=shgetc(f))+1]) {
 					switch (mbrtowc(&wc, &(char){c}, 1, &st)) {
 					case -1:
 						goto input_fail;
 					case -2:
 						continue;
 					}
-					if (wcs) {
-						wcs[i++] = wc;
-					} else if (isoc23) {
-						i++;
-					}
+					if (wcs) wcs[i++] = wc;
 					if (alloc && i==k) {
-						if (isoc23 && k > (SIZE_MAX/sizeof(wchar_t)-1)/2) {
-							errno = ENOMEM;
-							goto alloc_fail;
-						}
 						k+=k+1;
 						wchar_t *tmp = realloc(wcs, k*sizeof(wchar_t));
-						if (!tmp) {
-							goto alloc_fail;
-						}
+						if (!tmp) goto alloc_fail;
 						wcs = tmp;
 					}
 				}
-				if (!mbsinit(&st)) {
-					if (isoc23) {
-						errno = EILSEQ;
-					}
-					goto input_fail;
-				}
+				if (!mbsinit(&st)) goto input_fail;
 			} else if (alloc) {
 				s = malloc(k);
-				if (!s) {
-					goto alloc_fail;
-				}
+				if (!s) goto alloc_fail;
 				while (scanset[(c=shgetc(f))+1]) {
 					s[i++] = c;
 					if (i==k) {
-						if (isoc23 && k > (SIZE_MAX-1)/2) {
-							errno = ENOMEM;
-							goto alloc_fail;
-						}
 						k+=k+1;
 						char *tmp = realloc(s, k);
-						if (!tmp) {
-							goto alloc_fail;
-						}
+						if (!tmp) goto alloc_fail;
 						s = tmp;
 					}
 				}
@@ -342,13 +275,9 @@ static int vfscanf_internal(FILE *restrict f, const char *restrict fmt, va_list 
 			} else {
 				while (scanset[(c=shgetc(f))+1]);
 			}
-			if (!isoc23 || size != SIZE_l || !width || i < width) {
-				shunget(f);
-			}
+			shunget(f);
 			if (!shcnt(f)) goto match_fail;
-			if (t == 'c' && !isoc23 && shcnt(f) != width) {
-				goto match_fail;
-			}
+			if (t == 'c' && shcnt(f) != width) goto match_fail;
 			if (alloc) {
 				if (size == SIZE_l) *(wchar_t **)dest = wcs;
 				else *(char **)dest = s;
@@ -359,20 +288,6 @@ static int vfscanf_internal(FILE *restrict f, const char *restrict fmt, va_list 
 			}
 			break;
 		case 'p':
-			if (isoc23 && (!width || width >= 5)) {
-				if (shgetc(f) == '(') {
-					for (i=0; i<4; i++) {
-						c = shgetc(f);
-						if (tolower(c) != "nil)"[i]) {
-							shunget(f);
-							goto match_fail;
-						}
-					}
-					x = 0;
-					goto store_integer;
-				}
-				shunget(f);
-			}
 		case 'X':
 		case 'x':
 			base = 16;
@@ -380,30 +295,15 @@ static int vfscanf_internal(FILE *restrict f, const char *restrict fmt, va_list 
 		case 'o':
 			base = 8;
 			goto int_common;
-		case 'b':
-			/* Preserve legacy handling of length-modified unsupported formats. */
-			if (!isoc23) {
-				break;
-			}
-			base = 2;
-			goto int_common;
 		case 'd':
 		case 'u':
 			base = 10;
 			goto int_common;
 		case 'i':
 			base = 0;
-int_common:
-			saved_errno = errno;
-			x = isoc23 ? __intscan_c23(f, base, ULLONG_MAX)
-				: __intscan(f, base, 0, ULLONG_MAX, 0);
-			if (!shcnt(f)) {
-				if (isoc23 && errno == EINVAL && !(f->flags & F_ERR)) {
-					errno = saved_errno;
-				}
-				goto match_fail;
-			}
-store_integer:
+		int_common:
+			x = __intscan(f, base, 0, ULLONG_MAX);
+			if (!shcnt(f)) goto match_fail;
 			if (t=='p' && dest) *(void **)dest = (void *)(uintptr_t)x;
 			else store_int(dest, size, x);
 			break;
@@ -412,37 +312,30 @@ store_integer:
 		case 'f': case 'F':
 		case 'g': case 'G':
 #if (defined(MUSL_AARCH64_ARCH)) || (defined(MUSL_ARM_ARCH))
-			if (!isoc23) {
-				if (width == 0 || width > sizeof(buf) - 1)
-					width = sizeof(buf) - 1;
-				int count = parsefloat(f, buf, buf + width);
-				if (count == 0)
-					goto match_fail;
-				if (dest) switch (size) {
-				case SIZE_def:
-					y = strtof(buf, &endptr);
-					*(float *)dest = y;
-					break;
-				case SIZE_l:
-					y = strtod(buf, &endptr);
-					*(double *)dest = y;
-					break;
-				case SIZE_L:
-					y = strtold(buf, &endptr);
-					*(long double *)dest = y;
-					break;
-				}
+			if (width == 0 || width > sizeof(buf) - 1)
+				width = sizeof(buf) - 1;
+			int count = parsefloat(f, buf, buf + width);
+			if (count == 0)
+				goto match_fail;
+			if (dest) switch (size) {
+			case SIZE_def:
+				y = strtof(buf, &endptr);
+				*(float *)dest = y;
+				break;
+			case SIZE_l:
+				y = strtod(buf, &endptr);
+				*(double *)dest = y;
+				break;
+			case SIZE_L:
+				y = strtold(buf, &endptr);
+				*(long double *)dest = y;
 				break;
 			}
-#endif
-			saved_errno = errno;
-			y = isoc23 ? __floatscan_c23(f, size) : __floatscan(f, size, 0);
-			if (!shcnt(f)) {
-				if (isoc23 && errno == EINVAL && !(f->flags & F_ERR)) {
-					errno = saved_errno;
-				}
-				goto match_fail;
-			}
+			break;
+		}
+#else
+			y = __floatscan(f, size, 0);
+			if (!shcnt(f)) goto match_fail;
 			if (dest) switch (size) {
 			case SIZE_def:
 				*(float *)dest = y;
@@ -456,21 +349,15 @@ store_integer:
 			}
 			break;
 		}
+#endif
 		pos += shcnt(f);
-		if (dest) {
-			matches++;
-		}
+		if (dest) matches++;
 	}
 	if (0) {
-width_fail:
-		errno = EINVAL;
-		goto match_fail;
 fmt_fail:
 alloc_fail:
 input_fail:
-		if (!matches) {
-			matches--;
-		}
+		if (!matches) matches--;
 match_fail:
 		if (alloc) {
 			free(s);
@@ -481,14 +368,4 @@ match_fail:
 	return matches;
 }
 
-int vfscanf(FILE *restrict f, const char *restrict fmt, va_list ap)
-{
-	return vfscanf_internal(f, fmt, ap, 0);
-}
-
-int __isoc23_vfscanf(FILE *restrict f, const char *restrict fmt, va_list ap)
-{
-	return vfscanf_internal(f, fmt, ap, 1);
-}
-
-weak_alias(vfscanf, __isoc99_vfscanf);
+weak_alias(vfscanf,__isoc99_vfscanf);

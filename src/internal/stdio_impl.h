@@ -149,9 +149,6 @@ hidden off_t __ftello_unlocked(FILE *);
 hidden size_t __fwritex(const unsigned char *, size_t, FILE *);
 hidden int __putc_unlocked(int, FILE *);
 
-hidden int __vfwscanf(FILE *, const wchar_t *, va_list, int, const wchar_t *);
-hidden int __vswscanf(const wchar_t *, const wchar_t *, va_list, int);
-
 hidden FILE *__fdopen(int, const char *);
 hidden FILE *__fdopenx(int, int);
 hidden int __fmodeflags(const char *, int *);
