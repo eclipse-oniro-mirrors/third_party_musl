@@ -19,4 +19,5 @@ functionalext_adlt_test = [
     "ld-musl:adlt_ld_musl_test",
     "tls:adlt_tls_test",
     "ubsan:adlt_ubsan_test",
+    "prelink:adlt_prelink_test",
 ]
