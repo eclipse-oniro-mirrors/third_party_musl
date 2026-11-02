@@ -54,7 +54,8 @@ static void *arg_n(va_list ap, unsigned int n)
 	return p;
 }
 
-static int vfscanf_internal(FILE *restrict f, const char *restrict fmt, va_list ap, int isoc23)
+static inline __attribute__((__always_inline__))
+int vfscanf_internal(FILE *restrict f, const char *restrict fmt, va_list ap, int isoc23)
 {
 #if (defined(MUSL_AARCH64_ARCH)) || (defined(MUSL_ARM_ARCH))
 	char buf[BUF_LEN];
