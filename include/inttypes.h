@@ -18,9 +18,16 @@ imaxdiv_t imaxdiv(intmax_t, intmax_t);
 
 intmax_t strtoimax(const char *__restrict, char **__restrict, int);
 uintmax_t strtoumax(const char *__restrict, char **__restrict, int);
+intmax_t __isoc23_strtoimax(const char *__restrict, char **__restrict, int);
+uintmax_t __isoc23_strtoumax(const char *__restrict, char **__restrict, int);
 
 intmax_t wcstoimax(const wchar_t *__restrict, wchar_t **__restrict, int);
 uintmax_t wcstoumax(const wchar_t *__restrict, wchar_t **__restrict, int);
+
+#ifdef _OHOS_ISOC23_CONVERSION_SOURCE
+__REDIR(strtoimax, __isoc23_strtoimax);
+__REDIR(strtoumax, __isoc23_strtoumax);
+#endif
 
 #if UINTPTR_MAX == UINT64_MAX
 #define __PRI64  "l"
@@ -194,6 +201,24 @@ uintmax_t wcstoumax(const wchar_t *__restrict, wchar_t **__restrict, int);
 #define SCNoFAST32 "o"
 #define SCNoFAST64 __PRI64 "o"
 
+#define SCNb8   "hhb"
+#define SCNb16  "hb"
+#define SCNb32  "b"
+#define SCNb64  __PRI64 "b"
+
+#define SCNbLEAST8  "hhb"
+#define SCNbLEAST16 "hb"
+#define SCNbLEAST32 "b"
+#define SCNbLEAST64 __PRI64 "b"
+
+#define SCNbFAST8  "hhb"
+#define SCNbFAST16 "b"
+#define SCNbFAST32 "b"
+#define SCNbFAST64 __PRI64 "b"
+
+#define SCNbMAX __PRI64 "b"
+#define SCNbPTR __PRIPTR "b"
+
 #define SCNx8   "hhx"
 #define SCNx16  "hx"
 #define SCNx32  "x"
@@ -226,4 +251,3 @@ uintmax_t wcstoumax(const wchar_t *__restrict, wchar_t **__restrict, int);
 #endif
 
 #endif
-
