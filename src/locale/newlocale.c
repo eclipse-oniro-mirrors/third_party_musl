@@ -64,6 +64,16 @@ locale_t __newlocale(int mask, const char *name, locale_t loc)
 	LOCK(__locale_lock);
 	loc = do_newlocale(mask, name, loc);
 	UNLOCK(__locale_lock);
+#ifdef FEATURE_ICU_LOCALE
+	if (loc) {
+		for (int i = 0; i < LC_ALL; i++) {
+			if (loc->cat[i] && loc->cat[i]->flag == ICU_VALID) {
+				set_icu_directory();
+				break;
+			}
+		}
+	}
+#endif
 	return loc;
 }
 

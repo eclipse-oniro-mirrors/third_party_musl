@@ -423,7 +423,7 @@ static long double hexfloat(FILE *f, int bits, int emin, int sign, int pok)
 	return scalbnl(y, e2);
 }
 
-long double __floatscan(FILE *f, int prec, int pok)
+static long double floatscan(FILE *f, int prec, int pok, int isoc23)
 {
 	int sign = 1;
 	size_t i;
@@ -469,14 +469,19 @@ long double __floatscan(FILE *f, int prec, int pok)
 	if (i==3) {
 		if (shgetc(f) != '(') {
 			shunget(f);
-			return NAN;
+			return isoc23 ? copysignl(NAN, sign) : NAN;
 		}
 		for (i=1; ; i++) {
 			c = shgetc(f);
 			if (c-'0'<10U || c-'A'<26U || c-'a'<26U || c=='_')
 				continue;
-			if (c==')') return NAN;
-			shunget(f);
+			if (c==')') {
+				return isoc23 ? copysignl(NAN, sign) : NAN;
+			}
+			/* glibc 2.42 scanf consumes an invalid payload character. */
+			if (!isoc23) {
+				shunget(f);
+			}
 			if (!pok) {
 				errno = EINVAL;
 				shlim(f, 0);
@@ -504,4 +509,15 @@ long double __floatscan(FILE *f, int prec, int pok)
 	}
 
 	return decfloat(f, c, bits, emin, sign, pok);
+}
+
+long double __floatscan(FILE *f, int prec, int pok)
+{
+	return floatscan(f, prec, pok, 0);
+}
+
+/* Keep glibc scanf compatibility separate from strto* and legacy scanf. */
+long double __floatscan_c23(FILE *f, int prec)
+{
+	return floatscan(f, prec, 0, 1);
 }

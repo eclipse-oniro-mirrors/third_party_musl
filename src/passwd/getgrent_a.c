@@ -1,6 +1,8 @@
 #include "pwf.h"
 #include <pthread.h>
 
+#define FIX(x) (gr->gr_##x = gr->gr_##x-rline+buf)
+
 static unsigned atou(char **s)
 {
 	unsigned x;
@@ -65,4 +67,26 @@ end:
 	*res = gr;
 	if(rv) errno = rv;
 	return rv;
+}
+
+int __getgrent_a_r(struct group *gr, char *buf, size_t size,
+	char *rline, size_t len, char **rmem, size_t nmem)
+{
+	size_t i;
+
+	if (size < len + (nmem+1)*sizeof(char *) + 32) {
+		return ERANGE;
+	}
+
+	buf += (16-(uintptr_t)buf)%16;
+	gr->gr_mem = (void *)buf;
+	buf += (nmem+1)*sizeof(char *);
+	memcpy(buf, rline, len);
+	FIX(name);
+	FIX(passwd);
+	for (i=0; rmem[i]; i++) {
+		gr->gr_mem[i] = rmem[i]-rline+buf;
+	}
+	gr->gr_mem[i] = 0;
+	return 0;
 }

@@ -21,8 +21,6 @@ static char *line, **mem;
 static struct group gr;
 static int grent_lock[1];
 
-#define FIX(x) (gr->gr_##x = gr->gr_##x-rline+buf)
-
 void setgrent()
 {
 	if (f) fclose(f);
@@ -57,28 +55,6 @@ struct group *getgrnam(const char *name)
 	return res;
 }
 
-static int getgrent_fill_buf(struct group *gr, char *buf, size_t size,
-	char *rline, size_t len, char **rmem, size_t nmem)
-{
-	size_t i;
-
-	if (size < len + (nmem+1)*sizeof(char *) + 32) {
-		return ERANGE;
-	}
-
-	buf += (16-(uintptr_t)buf)%16;
-	gr->gr_mem = (void *)buf;
-	buf += (nmem+1)*sizeof(char *);
-	memcpy(buf, rline, len);
-	FIX(name);
-	FIX(passwd);
-	for (i=0; rmem[i]; i++) {
-		gr->gr_mem[i] = rmem[i]-rline+buf;
-	}
-	gr->gr_mem[i] = 0;
-	return 0;
-}
-
 int getgrent_r(struct group *gr, char *buf, size_t size, struct group **res)
 {
 	char *rline = 0;
@@ -108,7 +84,7 @@ int getgrent_r(struct group *gr, char *buf, size_t size, struct group **res)
 		}
 		goto done;
 	}
-	rv = getgrent_fill_buf(gr, buf, size, rline, len, rmem, nmem);
+	rv = __getgrent_a_r(gr, buf, size, rline, len, rmem, nmem);
 	if (rv == ERANGE) {
 		*res = 0;
 		free(rmem);
