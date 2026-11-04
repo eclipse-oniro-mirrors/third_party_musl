@@ -75,6 +75,9 @@ struct pthread {
 		char is_configured : 1;
 	} gwp_asan_tls;
 
+	/* Set for the duration of a custom GWP-ASan unwind callback. */
+	volatile unsigned char gwp_asan_in_custom_unwind;
+
 	#ifdef CXA_THREAD_USE_TLS
 	struct thread_local_dtor {
 		void (*func) (void *);

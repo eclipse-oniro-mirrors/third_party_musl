@@ -757,15 +757,109 @@ GWP_ASAN_NO_ADDRESS size_t run_unwind(size_t *frame_buf,
     return num_frames;
 }
 
+static gwp_asan_unwind_callback gwp_asan_unwind_fn;
+
+static int gwp_asan_begin_custom_unwind(void)
+{
+    struct pthread *self = __pthread_self();
+    if (self->gwp_asan_in_custom_unwind) {
+        return 0;
+    }
+    self->gwp_asan_in_custom_unwind = 1;
+    return 1;
+}
+
+static void gwp_asan_end_custom_unwind(void)
+{
+    __pthread_self()->gwp_asan_in_custom_unwind = 0;
+}
+
+/* Returns true when the registered callback ran. The recorded count is clamped
+ * to [num_frames, max_record_stack] so a bad backend cannot drop frames already
+ * recorded or report more frames than frame_buf holds.
+ * Returns false when no callback is registered, or this thread is already inside one.
+ */
+static bool call_custom_unwind(size_t *frame_buf, size_t num_frames,
+                                size_t max_record_stack, size_t current_frame_addr,
+                                size_t stack_start, size_t stack_end, size_t *recorded)
+{
+    gwp_asan_unwind_callback unwind;
+
+    if (!frame_buf || max_record_stack == 0 || !recorded) {
+        return false;
+    }
+    unwind = __atomic_load_n(&gwp_asan_unwind_fn, __ATOMIC_ACQUIRE);
+    if (!unwind) {
+        return false;
+    }
+    if (!gwp_asan_begin_custom_unwind()) {
+        return false;
+    }
+    *recorded = unwind(frame_buf, num_frames, max_record_stack,
+                       current_frame_addr, stack_start, stack_end);
+    /* A misbehaving backend must not break the "count <= max" invariant
+     * nor discard frames already recorded (e.g. the fault PC). */
+    if (*recorded > max_record_stack) {
+        *recorded = max_record_stack;
+    }
+    if (*recorded < num_frames) {
+        *recorded = num_frames;
+    }
+    gwp_asan_end_custom_unwind();
+    return true;
+}
+
+int libc_gwp_asan_set_unwind_callbacks(const gwp_asan_unwind_callbacks *callbacks)
+{
+    int ret;
+
+    if (!callbacks) {
+        __atomic_store_n(&gwp_asan_unwind_fn, NULL, __ATOMIC_RELEASE);
+        ret = GWP_ASAN_UNWIND_REGISTER_OK;
+        MUSL_LOGW("[gwp_asan]: libc_gwp_asan_set_unwind_callbacks unregister success, unwind:%{public}p.",
+                  (void *)NULL);
+        return ret;
+    }
+    if (callbacks->struct_size < sizeof(*callbacks)) {
+        ret = GWP_ASAN_UNWIND_REGISTER_INVALID_ARGUMENT;
+        MUSL_LOGW("[gwp_asan]: libc_gwp_asan_set_unwind_callbacks register failed, invalid struct_size:%{public}u, ret:%{public}d.",
+                  callbacks->struct_size, ret);
+        return ret;
+    }
+    if (callbacks->abi_version != GWP_ASAN_UNWIND_ABI_VERSION) {
+        ret = GWP_ASAN_UNWIND_REGISTER_UNSUPPORTED_ABI;
+        MUSL_LOGW("[gwp_asan]: libc_gwp_asan_set_unwind_callbacks register failed, unsupported abi:%{public}u, ret:%{public}d.",
+                  callbacks->abi_version, ret);
+        return ret;
+    }
+    if (!callbacks->unwind) {
+        ret = GWP_ASAN_UNWIND_REGISTER_INVALID_ARGUMENT;
+        MUSL_LOGW("[gwp_asan]: libc_gwp_asan_set_unwind_callbacks register failed, unwind is null, ret:%{public}d.", ret);
+        return ret;
+    }
+
+    __atomic_store_n(&gwp_asan_unwind_fn, callbacks->unwind, __ATOMIC_RELEASE);
+    ret = GWP_ASAN_UNWIND_REGISTER_OK;
+    MUSL_LOGW("[gwp_asan]: libc_gwp_asan_set_unwind_callbacks register success, unwind:%{public}p.",
+              (void *)callbacks->unwind);
+    return ret;
+}
+
 GWP_ASAN_NO_ADDRESS size_t libc_gwp_asan_unwind_fast(size_t *frame_buf, size_t max_record_stack)
 {
     size_t current_frame_addr = (size_t)__builtin_frame_address(0);
     size_t num_frames = 0;
     size_t stack_start = 0;
     size_t stack_end = 0;
+    size_t custom_frames;
 
     if (!select_stack_bounds(current_frame_addr, &stack_start, &stack_end)) {
         return num_frames;
+    }
+
+    if (call_custom_unwind(frame_buf, num_frames, max_record_stack,
+                           current_frame_addr, stack_start, stack_end, &custom_frames)) {
+        return custom_frames;
     }
 
     return run_unwind(frame_buf, num_frames, max_record_stack, current_frame_addr, stack_start, stack_end);
@@ -780,6 +874,7 @@ GWP_ASAN_NO_ADDRESS size_t libc_gwp_asan_unwind_segv(size_t *frame_buf, size_t m
     size_t num_frames = 0;
     size_t stack_start = 0;
     size_t stack_end = 0;
+    size_t custom_frames;
 
     if (frame_buf != NULL && pc != 0 && num_frames < max_record_stack) {
         frame_buf[num_frames] = strip_pac_pc(pc);
@@ -787,6 +882,11 @@ GWP_ASAN_NO_ADDRESS size_t libc_gwp_asan_unwind_segv(size_t *frame_buf, size_t m
     }
     if (!select_stack_bounds(current_frame_addr, &stack_start, &stack_end)) {
         return num_frames;
+    }
+
+    if (call_custom_unwind(frame_buf, num_frames, max_record_stack,
+                           current_frame_addr, stack_start, stack_end, &custom_frames)) {
+        return custom_frames;
     }
 
     return run_unwind(frame_buf, num_frames, max_record_stack, current_frame_addr, stack_start, stack_end);
@@ -906,9 +1006,19 @@ void* get_platform_gwp_asan_tls_slot()
     return (void*)(&(__pthread_self()->gwp_asan_tls));
 }
 
+static int gwp_asan_custom_unwind_active(void)
+{
+    if (GWP_ASAN_PREDICT_TRUE(
+            __atomic_load_n(&gwp_asan_unwind_fn, __ATOMIC_RELAXED) == NULL)) {
+        return 0;
+    }
+    return __pthread_self()->gwp_asan_in_custom_unwind;
+}
+
 void* libc_gwp_asan_malloc(size_t bytes)
 {
-    if (GWP_ASAN_PREDICT_TRUE(!gwp_asan_initialized)) {
+    if (GWP_ASAN_PREDICT_TRUE(!gwp_asan_initialized) ||
+        GWP_ASAN_PREDICT_FALSE(gwp_asan_custom_unwind_active())) {
         return MuslFunc(malloc)(bytes);
     }
     void *res = NULL;
@@ -923,7 +1033,8 @@ void* libc_gwp_asan_malloc(size_t bytes)
 
 void* libc_gwp_asan_calloc(size_t nmemb, size_t size)
 {
-    if (GWP_ASAN_PREDICT_TRUE(!gwp_asan_initialized)) {
+    if (GWP_ASAN_PREDICT_TRUE(!gwp_asan_initialized) ||
+        GWP_ASAN_PREDICT_FALSE(gwp_asan_custom_unwind_active())) {
         return MuslFunc(calloc)(nmemb, size);
     }
 
@@ -945,6 +1056,13 @@ void* libc_gwp_asan_calloc(size_t nmemb, size_t size)
 void* libc_gwp_asan_realloc(void *ptr, size_t size)
 {
     if (GWP_ASAN_PREDICT_TRUE(!gwp_asan_initialized)) {
+        return MuslFunc(realloc)(ptr, size);
+    }
+    if (GWP_ASAN_PREDICT_FALSE(gwp_asan_custom_unwind_active())) {
+        if (GWP_ASAN_PREDICT_FALSE(gwp_asan_pointer_is_mine(ptr))) {
+            MUSL_LOGW("[gwp_asan]: skip realloc of gwp_asan ptr %{public}p inside custom unwind.", ptr);
+            return NULL;
+        }
         return MuslFunc(realloc)(ptr, size);
     }
 
@@ -980,6 +1098,13 @@ void* libc_gwp_asan_realloc(void *ptr, size_t size)
 void libc_gwp_asan_free(void *addr)
 {
     if (GWP_ASAN_PREDICT_TRUE(!gwp_asan_initialized)) {
+        return MuslFunc(free)(addr);
+    }
+    if (GWP_ASAN_PREDICT_FALSE(gwp_asan_custom_unwind_active())) {
+        if (GWP_ASAN_PREDICT_FALSE(gwp_asan_pointer_is_mine(addr))) {
+            MUSL_LOGW("[gwp_asan]: skip free of gwp_asan ptr %{public}p inside custom unwind.", addr);
+            return;
+        }
         return MuslFunc(free)(addr);
     }
     if (GWP_ASAN_PREDICT_FALSE(gwp_asan_pointer_is_mine(addr))) {
