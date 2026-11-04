@@ -22,9 +22,17 @@ When musl_extended_function support is enabled, setappuid() applies the app uid 
 
 On success, setappuid() returns 0.
 
-When musl_extended_function is disabled, setappuid() returns the result of setuid(uid).
+When musl_extended_function is disabled, or when it is enabled but the change fails on all threads (so no thread applied the change), setappuid() falls back to setuid(uid) and returns its result (0 on success, -1 on error with errno set).
+
+When musl_extended_function is enabled and a partial thread failure occurs (some threads updated the app uid successfully, others failed), setappuid() does not return: the process is terminated with SIGKILL to avoid an inconsistent app-uid state across threads.
 
 #### **ERRORS**
+
+**EPERM**: The calling process does not have the required privileges. This is propagated from the setuid() fallback path when musl_extended_function is disabled or when the change fails on all threads.
+
+**EINVAL**: The uid argument is invalid. This is propagated from the setuid() fallback path.
+
+When musl_extended_function is enabled and setappuid() succeeds, it does not set errno. When a partial thread failure triggers SIGKILL, the process is terminated before any errno is reported.
 
 #### ATTRIBUTES
 
@@ -32,6 +40,18 @@ When musl_extended_function is disabled, setappuid() returns the result of setui
 | ----------- | ------------- | -------------- |
 | setappuid() | Thread safety | MT-Safe        |
 |             | Signal safety | Not Safe       |
+
+#### HISTORY
+
+-- 2026
+
+#### **NOTES**
+
+This feature is designed specifically for when musl_extended_function is true. When musl_extended_function is disabled, setappuid() is equivalent to setuid(uid).
+
+#### **CONFORMING TO**
+
+This is a platform-specific extension and is not part of any POSIX standard.
 
 #### EXAMPLES
 

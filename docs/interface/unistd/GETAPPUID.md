@@ -24,9 +24,11 @@ getappuid() returns the value most recently set by setappuid(). If setappuid() h
 
 The getappuid() function returns the application user identifier.
 
-When musl_extended_function is disabled, getappuid() returns the same value as getuid().
+When musl_extended_function is disabled, or when it is enabled but the access token framework query fails, getappuid() falls back to getuid() and returns the user id of the calling process.
 
 #### **ERRORS**
+
+No errors are defined. getappuid() does not use errno as an error indicator: on any internal failure it silently falls back to getuid().
 
 #### ATTRIBUTES
 
@@ -34,6 +36,18 @@ When musl_extended_function is disabled, getappuid() returns the same value as g
 | ----------- | ------------- | -------------- |
 | getappuid() | Thread safety | MT-Safe        |
 |             | Signal safety | Not Safe       |
+
+#### HISTORY
+
+-- 2026
+
+#### **NOTES**
+
+This feature is designed specifically for when musl_extended_function is true. When musl_extended_function is disabled, getappuid() is equivalent to getuid().
+
+#### **CONFORMING TO**
+
+This is a platform-specific extension and is not part of any POSIX standard.
 
 #### EXAMPLES
 

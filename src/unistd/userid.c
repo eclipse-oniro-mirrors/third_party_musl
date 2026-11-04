@@ -70,6 +70,7 @@ struct setappuid_ctx {
     int ret;
 };
 
+#ifdef MUSL_EXTERNAL_FUNCTION
 static void do_setappuid(void *p)
 {
     struct setappuid_ctx *c = p;
@@ -87,9 +88,7 @@ static void do_setappuid(void *p)
     }
     long ret = __syscall(SYS_ioctl, fd, ACCESS_TOKENID_SET_USERID, &c->uid);
     if (__syscall(SYS_close, fd) && !ret) {
-#ifdef MUSL_EXTERNAL_FUNCTION
         MUSL_LOGE("setappuid: close fd failed after successful ioctl, uid: %{public}d", c->uid);
-#endif
     }
     if (ret && !c->ret) {
         __block_all_sigs(0);
@@ -97,6 +96,7 @@ static void do_setappuid(void *p)
     }
     c->ret = ret;
 }
+#endif
 
 int setappuid(uid_t uid)
 {
