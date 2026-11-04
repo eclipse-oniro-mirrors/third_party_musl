@@ -1,8 +1,14 @@
 /* The time64 has not been used yet in liteos_m */
 #define _REDIR_TIME64 0
+#ifdef __LP64__
+#define _Addr long
+#define _Int64 long
+#define _Reg long
+#else
 #define _Addr int
 #define _Int64 long long
 #define _Reg int
+#endif
 
 #ifdef __ARMEB__
 #define __BYTE_ORDER 4321
@@ -10,7 +16,11 @@
 #define __BYTE_ORDER 1234
 #endif
 
+#ifdef __LP64__
+#define __LONG_MAX 0x7fffffffffffffffL
+#else
 #define __LONG_MAX 0x7fffffffL
+#endif
 
 #ifndef __cplusplus
 #if defined(__NEED_wchar_t) && !defined(__DEFINED_wchar_t)
