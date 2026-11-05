@@ -22,17 +22,19 @@ When musl_extended_function support is enabled, setappuid() applies the app uid 
 
 On success, setappuid() returns 0.
 
-When musl_extended_function is disabled, or when it is enabled but the change fails on all threads (so no thread applied the change), setappuid() falls back to setuid(uid) and returns its result (0 on success, -1 on error with errno set).
+When musl_extended_function is disabled, or when it is enabled but the change fails on all threads (so no thread applied the change), setappuid() falls back to setuid(uid) and returns its result (0 on success, -1 on error with errno set). Before the fallback, errno is set to ENOTSUP to indicate that the access token mechanism was unavailable. If the subsequent setuid() call fails, its error code (EPERM, EINVAL, etc.) overwrites ENOTSUP so the caller sees the real cause of failure. If setuid() succeeds, errno remains ENOTSUP, allowing the caller to detect that a fallback occurred and the real process uid was changed instead of the token uid.
 
 When musl_extended_function is enabled and a partial thread failure occurs (some threads updated the app uid successfully, others failed), setappuid() does not return: the process is terminated with SIGKILL to avoid an inconsistent app-uid state across threads.
 
 #### **ERRORS**
 
+**ENOTSUP**: The access token driver is unavailable or the ioctl failed on all threads, so setappuid() fell back to setuid(). If setuid() then fails, this error code is overwritten by the setuid() failure code. If setuid() succeeds, errno remains ENOTSUP, indicating a silent fallback to the real-uid change path.
+
 **EPERM**: The calling process does not have the required privileges. This is propagated from the setuid() fallback path when musl_extended_function is disabled or when the change fails on all threads.
 
 **EINVAL**: The uid argument is invalid. This is propagated from the setuid() fallback path.
 
-When musl_extended_function is enabled and setappuid() succeeds, it does not set errno. When a partial thread failure triggers SIGKILL, the process is terminated before any errno is reported.
+When musl_extended_function is enabled and setappuid() succeeds via the ioctl path (no fallback), errno is not modified. When a partial thread failure triggers SIGKILL, the process is terminated before any errno is reported.
 
 #### ATTRIBUTES
 

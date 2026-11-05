@@ -12,6 +12,7 @@ https://gitcode.com/openharmony/interface_sdk_c/blob/master/third_party/musl/ndk
 新增以下接口专为musl_extended_function为true设计使用：
 - 新增`getappuid`: 获取当前进程的应用用户标识（app uid），通过访问令牌设备查询；未启用时回退为getuid
 - 新增`setappuid`: 设置当前进程的应用用户标识，通过__synccall广播到所有线程；部分线程失败时以SIGKILL终止进程，全部失败或未启用时回退为setuid
+- 降级通知：当access token驱动不可用导致回退时，errno设置为ENOTSUP，调用方可通过`errno == ENOTSUP`判断是否发生了降级
 
 2026/10/31 <stdlib.h>
 - 新增`__isoc23_strtol`: 将字符串转换为long，支持C23二进制前缀

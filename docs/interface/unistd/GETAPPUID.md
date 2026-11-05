@@ -24,11 +24,13 @@ getappuid() returns the value most recently set by setappuid(). If setappuid() h
 
 The getappuid() function returns the application user identifier.
 
-When musl_extended_function is disabled, or when it is enabled but the access token framework query fails, getappuid() falls back to getuid() and returns the user id of the calling process.
+When musl_extended_function is disabled, or when it is enabled but the access token framework query fails, getappuid() falls back to getuid() and returns the user id of the calling process. In the fallback case, errno is set to ENOTSUP to indicate that the preferred access token mechanism was unavailable and the function took the fallback path.
+
+On the success path (the access token query succeeded), getappuid() preserves the value of errno from before the call.
 
 #### **ERRORS**
 
-No errors are defined. getappuid() does not use errno as an error indicator: on any internal failure it silently falls back to getuid().
+**ENOTSUP**: The access token driver is unavailable or the ioctl query failed, so getappuid() fell back to getuid(). The returned value is the process user id, not the app uid.
 
 #### ATTRIBUTES
 

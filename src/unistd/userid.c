@@ -18,6 +18,7 @@
 #include <signal.h>
 #include <sys/ioctl.h>
 #include <stdint.h>
+#include <errno.h>
 #include <syscall.h>
 #include "libc.h"
 #ifdef MUSL_EXTERNAL_FUNCTION
@@ -51,16 +52,19 @@ enum {
 uid_t getappuid(void)
 {
 #ifdef MUSL_EXTERNAL_FUNCTION
+    int saved_errno = errno;
     int fd = open(HDAC_DEV, O_RDONLY);
-    if (fd >=0) {
+    if (fd >= 0) {
         uid_t userid;
         int ret = ioctl(fd, ACCESS_TOKENID_GET_USERID, &userid);
         close(fd);
         if (ret == 0) {
+            errno = saved_errno;
             return userid;
         }
     }
     /* ioctl failed, fall back to getuid*/
+    errno = ENOTSUP;
 #endif
     return getuid();
 }
@@ -105,6 +109,7 @@ int setappuid(uid_t uid)
     __synccall(do_setappuid, &c);
     if (c.ret != 0) {
         /* ioctl failed or no thread executed, fall back to setuid*/
+        errno = ENOTSUP;
         return setuid(uid);
     }
     return 0;
