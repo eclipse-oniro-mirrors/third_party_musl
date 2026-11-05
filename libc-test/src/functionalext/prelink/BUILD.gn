@@ -1,0 +1,69 @@
+# Copyright (c) 2026 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("../../../test_template.gni")
+
+if (current_cpu == "arm64") {
+  test_unittest("prelink_align_test") {
+    target_dir = "functionalext/prelink"
+  }
+
+  # Carries a 2 MiB aligned PT_LOAD, so the loader selects KPMD_SIZE as the
+  # mapping alignment when transparent hugepages are enabled.
+  ohos_shared_library("prelink_align_huge") {
+    testonly = true
+
+    sources = [ "prelink_align_huge.c" ]
+
+    output_name = "prelink_align_huge"
+    output_extension = "so"
+
+    cflags_c = [
+      "-std=c99",
+      "-fPIC",
+    ]
+
+    subsystem_name = "musl"
+    part_name = "libc-test-lib"
+  }
+
+  ohos_shared_library("prelink_align_normal") {
+    testonly = true
+
+    sources = [ "prelink_align_normal.c" ]
+
+    output_name = "prelink_align_normal"
+    output_extension = "so"
+
+    cflags_c = [
+      "-std=c99",
+      "-fPIC",
+    ]
+
+    subsystem_name = "musl"
+    part_name = "libc-test-lib"
+  }
+}
+
+group("functionalext_prelink_test") {
+  testonly = true
+  deps = []
+
+  if (current_cpu == "arm64") {
+    deps += [
+      ":prelink_align_huge",
+      ":prelink_align_normal",
+      ":prelink_align_test",
+    ]
+  }
+}

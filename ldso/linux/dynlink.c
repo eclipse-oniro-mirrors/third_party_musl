@@ -185,6 +185,7 @@ struct relro_cache_entry {
 
 static int relro_cache_fd = -1;
 static size_t relro_cache_nr;
+static size_t relro_cache_size;
 static struct relro_cache_entry *relro_cache_entries;
 static unsigned char *relro_cache_base;
 
@@ -381,6 +382,61 @@ static int prelinker_dso_cmp(const void *a, const void *b)
 	return 0;
 }
 
+static size_t prelink_dedup_adlt_dsos(struct dso **dsos, size_t nr)
+{
+	size_t out = 0;
+	for (size_t i = 0; i < nr; ++i) {
+		if (i > 0 &&
+		    dsos[i]->dev == dsos[out - 1]->dev &&
+		    dsos[i]->ino == dsos[out - 1]->ino &&
+		    (dsos[out - 1]->adlt || dsos[i]->adlt)) {
+			continue;
+		}
+		dsos[out++] = dsos[i];
+	}
+	return out;
+}
+
+/*
+ * An adlt library's nDSOs are fine grained slices of one PT_GNU_RELRO, so
+ * snapshotting the segment would charge a process that uses a few nDSOs for the
+ * whole thing. The load address still has to be recorded.
+ */
+static bool prelink_skip_relro(const struct dso *p)
+{
+	return p->adlt != NULL;
+}
+
+/* Real offsets point past the metadata area, so 0 is free as "no snapshot". */
+#define PRELINK_NO_RELRO_OFFSET 0
+
+/* Page aligned end of the header plus the entry array. */
+static size_t relro_cache_data_min_offset(uint64_t nr)
+{
+	return (sizeof(struct relro_cache_header) +
+		nr * sizeof(struct relro_cache_entry) + PAGE_SIZE - 1) & -PAGE_SIZE;
+}
+
+static bool dso_has_shared_relro(const struct dso *p)
+{
+	size_t offset;
+	size_t relro_size;
+
+	if (!p->is_prelinked || !relro_cache_entries) {
+		return false;
+	}
+	if (p->relro_end <= p->relro_start) {
+		return false;
+	}
+	offset = relro_cache_entries[p->relro_cache_index].offset;
+	relro_size = p->relro_end - p->relro_start;
+	/* Reject the "no snapshot" marker, the metadata area and any overflow. */
+	if (offset < relro_cache_data_min_offset(relro_cache_nr)) {
+		return false;
+	}
+	return offset <= relro_cache_size && relro_size <= relro_cache_size - offset;
+}
+
 static int prelinker_relro_cmp(const void *a, const void *b)
 {
 	const struct relro_cache_entry *pa = (const struct relro_cache_entry *)a;
@@ -390,6 +446,64 @@ static int prelinker_relro_cmp(const void *a, const void *b)
 	if (pa->dev < pb->dev) return -1;
 	if (pa->dev > pb->dev) return 1;
 	return 0;
+}
+
+static bool relro_cache_entries_valid(const struct relro_cache_entry *entries,
+	size_t nr, size_t cache_size, uintptr_t reserve_base, size_t reserve_len)
+{
+	size_t min_offset = relro_cache_data_min_offset(nr);
+
+	/* lookup_relro_cache() bsearches entries[1..], so the order must hold. */
+	for (size_t i = 1; i + 1 < nr; i++) {
+		if (prelinker_relro_cmp(&entries[i], &entries[i + 1]) >= 0) {
+			return false;
+		}
+	}
+
+	for (size_t i = 0; i < nr; i++) {
+		const struct relro_cache_entry *e = &entries[i];
+		uintptr_t base = (uintptr_t)e->base;
+
+		/* base is a MAP_FIXED target even when there is no RELRO snapshot. */
+		if (base & (PAGE_SIZE - 1)) {
+			return false;
+		}
+		/* Entry 0 is ldso, already mapped and outside the reserve area. */
+		if (i != 0) {
+			if (!reserve_base ||
+			    base < reserve_base ||
+			    base - reserve_base >= reserve_len) {
+				return false;
+			}
+		}
+		if (e->offset == PRELINK_NO_RELRO_OFFSET) {
+			continue;
+		}
+		if (e->offset < min_offset || e->offset >= cache_size) {
+			return false;
+		}
+		/* The offset is the file offset of a page aligned RELRO mapping. */
+		if (e->offset & (PAGE_SIZE - 1)) {
+			return false;
+		}
+	}
+	return true;
+}
+
+static bool prelinked_range_in_reserve(const struct dso *p, size_t map_len)
+{
+	size_t base;
+	size_t reserve = (size_t)prelinker_reserve_area_address;
+	size_t reserve_len = (size_t)PRELINKER_RESERVE_MEMORY_LENGTH;
+
+	if (!reserve) {
+		return false;
+	}
+	base = (size_t)relro_cache_entries[p->relro_cache_index].base;
+	if (base < reserve || map_len > reserve_len) {
+		return false;
+	}
+	return base - reserve <= reserve_len - map_len;
 }
 
 static const struct relro_cache_entry *lookup_relro_cache(dev_t dev, ino_t ino)
@@ -2123,7 +2237,7 @@ UT_STATIC void fill_random_data(void *buf, size_t buflen)
 
 static void fill_ohos_random(const struct dso *dso, unsigned char *ohos_random_dest, size_t len, unsigned char *base)
 {
-	if (dso->is_prelinked && dso->relro_start && dso->relro_end) {
+	if (dso_has_shared_relro(dso) && dso->relro_start && dso->relro_end) {
 		unsigned char *current_dso_relro_base = base + dso->relro_start;
 		unsigned char *current_dso_relro_end = base + dso->relro_end;
 		if (ohos_random_dest >= current_dso_relro_base && (ohos_random_dest + len) <= current_dso_relro_end) {
@@ -2401,16 +2515,24 @@ UT_STATIC void *map_library(int fd, struct dso *dso, struct reserved_address_par
 		start_alignment = maxinum_alignment == KPMD_SIZE ? KPMD_SIZE : PAGE_SIZE;
 	}
 
+	size_t mapping_align = start_alignment > LIBRARY_ALIGNMENT ? start_alignment : LIBRARY_ALIGNMENT;
+
+	if (dso->is_prelinked && !prelinked_range_in_reserve(dso, map_len)) {
+		LD_LOGW("prelink: recorded address out of reserve area, loading normally");
+		dso->is_prelinked = false;
+		del_prelinked_dso(dso);
+	}
+
 	if (is_prelinker) {
-		if (map_len > prelinker_reserve_address_length) {
+		size_t aligned_addr = ALIGN(prelinker_reserve_address_base, mapping_align);
+		size_t next = ALIGN(aligned_addr + map_len, mapping_align);
+		if (next - prelinker_reserve_address_length > prelinker_reserve_address_base) {
 			goto error;
 		}
-		start_addr = prelinker_reserve_address_base;
+		prelinker_reserve_address_length -= next - prelinker_reserve_address_base;
+		prelinker_reserve_address_base = next;
+		start_addr = aligned_addr;
 		map_flags |= MAP_FIXED;
-		uintptr_t addr = (uintptr_t)(start_addr + map_len);
-		uintptr_t aligned_addr = (addr + LIBRARY_ALIGNMENT - 1) & ~(LIBRARY_ALIGNMENT - 1);
-		prelinker_reserve_address_length -= (aligned_addr - prelinker_reserve_address_base);
-		prelinker_reserve_address_base = aligned_addr;
 	} else if (dso->is_prelinked) {
 		start_addr = (size_t)relro_cache_entries[dso->relro_cache_index].base;
 		map_flags |= MAP_FIXED;
@@ -2428,7 +2550,6 @@ UT_STATIC void *map_library(int fd, struct dso *dso, struct reserved_address_par
 	/* we will find a mapping_align aligned address as the start of dso
 	 * so we need a tmp_map_len as map_len + mapping_align to make sure
 	 * we have enough space to shift the dso to the correct location. */
-	size_t mapping_align = start_alignment > LIBRARY_ALIGNMENT ? start_alignment : LIBRARY_ALIGNMENT;
 	size_t tmp_map_len = ALIGN(map_len, mapping_align) + mapping_align - PAGE_SIZE;
 
 	/* map the whole load segments with PROT_READ first for security consideration. */
@@ -4244,7 +4365,13 @@ static void *prelinker_get_reserve_area(void *address)
 		if (!address) {
 			reserve_address = mmap(address, reserve_area_length, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 		} else {
-			reserve_address = mmap(address, reserve_area_length, PROT_NONE, MAP_FIXED | MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+			reserve_address = mmap(address, reserve_area_length, PROT_NONE,
+				MAP_FIXED_NOREPLACE | MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+			if (reserve_address != MAP_FAILED && reserve_address != address) {
+				munmap(reserve_address, reserve_area_length);
+				reserve_address = MAP_FAILED;
+				errno = EEXIST;
+			}
 		}
 	}
 	if (reserve_address == MAP_FAILED) {
@@ -4544,7 +4671,6 @@ static int do_dlprelink_record(int memfd, const char *list_path, size_t *auxv)
 	if (prelink_head != &ldso) {
 		sorted_dso_list[0] = &ldso;
 		header.dso_nr++;
-		relro_sz += ldso.relro_end - ldso.relro_start;
 	}
 	for (struct dso *p = head; p; p = p->next) {
 		p->is_reloc_head_so_dep = false;
@@ -4574,11 +4700,20 @@ static int do_dlprelink_record(int memfd, const char *list_path, size_t *auxv)
 		}
 		sorted_dso_list[header.dso_nr] = p;
 		header.dso_nr++;
-		relro_sz += p->relro_end - p->relro_start;
 	}
 
 	/* keep ldso first */
 	qsort(&sorted_dso_list[1], header.dso_nr - 1, sizeof(struct dso *), prelinker_dso_cmp);
+
+	/* nDSOs share one file, mapping and RELRO: keep one entry per library. */
+	header.dso_nr = prelink_dedup_adlt_dsos(sorted_dso_list, header.dso_nr);
+
+	for (uint64_t i = 0; i < header.dso_nr; ++i) {
+		struct dso *p = sorted_dso_list[i];
+		if (!prelink_skip_relro(p)) {
+			relro_sz += p->relro_end - p->relro_start;
+		}
+	}
 
 	size_t meta_sz = (sizeof(header) + header.dso_nr * sizeof(entry) + PAGE_SIZE - 1) & -PAGE_SIZE;
 	header.cache_size = meta_sz + relro_sz;
@@ -4606,17 +4741,24 @@ static int do_dlprelink_record(int memfd, const char *list_path, size_t *auxv)
 	relro_sz = 0;
 	for (uint64_t i = 0; i < header.dso_nr; ++i) {
 		struct dso *p = sorted_dso_list[i];
+		bool skip_relro = prelink_skip_relro(p);
 		entry.dev = p->dev;
 		entry.ino = p->ino;
 		entry.base = p->base;
-		entry.offset = meta_sz + relro_sz;
-		relro_sz += p->relro_end - p->relro_start;
+		entry.offset = skip_relro ? PRELINK_NO_RELRO_OFFSET : meta_sz + relro_sz;
+		/* Real offsets start at meta_sz, so they never hit the marker. */
+		if (!skip_relro) {
+			relro_sz += p->relro_end - p->relro_start;
+		}
 		if (write(memfd, &entry, sizeof(entry)) < 0) {
 			error("prelink: failed to write entry to file, err=%m");
 			LD_LOGW("prelink: write entry failed, errno=%{public}d", errno);
 			free(sorted_dso_list);
 			runtime_jumper();
 			return -1;
+		}
+		if (entry.offset == PRELINK_NO_RELRO_OFFSET) {
+			continue;
 		}
 		if (pwrite(memfd, laddr(p, p->relro_start), p->relro_end - p->relro_start, entry.offset) < 0) {
 			error("prelink: failed to write relro data to file, err=%m");
@@ -4757,14 +4899,74 @@ int dlprelink_reserve_mem(void)
 	return 0;
 }
 
+/* Only reclaim what this call created; an earlier area belongs to the caller. */
+static void release_reserve_area(void *previous_area)
+{
+	if (previous_area || !prelinker_reserve_area_address) {
+		return;
+	}
+	if (munmap(prelinker_reserve_area_address, (size_t)PRELINKER_RESERVE_MEMORY_LENGTH) < 0) {
+		LD_LOGW("prelink: reserve area munmap failed, errno=%{public}d", errno);
+	}
+	prelinker_reserve_area_address = NULL;
+}
+
+static bool relro_cache_header_valid(int fd, struct relro_cache_header *hdr)
+{
+	size_t cache_size;
+	char probe;
+
+	if (pread(fd, hdr, sizeof(*hdr), 0) != sizeof(*hdr)) {
+		error("relro cache pread failed, err=%m");
+		LD_LOGW("prelink: relro cache pread failed, errno=%{public}d", errno);
+		return false;
+	}
+	if (!hdr->reserve_base ||
+	    ((uintptr_t)hdr->reserve_base & (PAGE_SIZE - 1))) {
+		error("invalid relro cache reserve base");
+		LD_LOGW("prelink: invalid relro cache reserve base");
+		return false;
+	}
+	cache_size = (size_t)hdr->cache_size;
+	if (cache_size <= sizeof(*hdr) ||
+	    (uint64_t)cache_size > (uint64_t)INT64_MAX ||
+	    pread(fd, &probe, 1, (off_t)(cache_size - 1)) != 1) {
+		error("invalid relro cache size");
+		LD_LOGW("prelink: invalid relro cache size, size=%{public}zu", cache_size);
+		return false;
+	}
+	return true;
+}
+
+static bool relro_cache_entries_ok(const struct relro_cache_header *hdr,
+	const struct relro_cache_entry *entries, void *reserve_address)
+{
+	size_t nr = hdr->dso_nr;
+	size_t cache_size = (size_t)hdr->cache_size;
+
+	if (nr == 0 || cache_size <= sizeof(*hdr) ||
+	    (cache_size - sizeof(*hdr)) / nr <= sizeof(entries[0])) {
+		error("invalid relro cache");
+		LD_LOGW("prelink: invalid relro cache, nr=%{public}zu, size=%{public}zu", nr, cache_size);
+		return false;
+	}
+	if (!relro_cache_entries_valid(entries, nr, cache_size,
+			(uintptr_t)reserve_address, (size_t)PRELINKER_RESERVE_MEMORY_LENGTH)) {
+		error("invalid relro cache entry");
+		LD_LOGW("prelink: relro cache has an out of range entry, nr=%{public}zu", nr);
+		return false;
+	}
+	return true;
+}
+
 static int do_dlprelink_register(int fd)
 {
 	struct relro_cache_header tmp_hdr;
-	if (pread(fd, &tmp_hdr, sizeof(tmp_hdr), 0) != sizeof(tmp_hdr)) {
-		error("relro cache pread failed, err=%m");
-		LD_LOGW("prelink: relro cache pread failed, errno=%{public}d", errno);
+	if (!relro_cache_header_valid(fd, &tmp_hdr)) {
 		return -1;
 	}
+
+	void *previous_area = prelinker_reserve_area_address;
 	void *reserve_address = prelinker_get_reserve_area((void *)(uintptr_t)tmp_hdr.reserve_base);
 	if (reserve_address == MAP_FAILED) {
 		error("get reserve area failed, err=%m");
@@ -4772,25 +4974,29 @@ static int do_dlprelink_register(int fd)
 	}
 
 	size_t cache_size = (size_t)tmp_hdr.cache_size;
-	relro_cache_base = mmap(NULL, cache_size, PROT_READ, MAP_SHARED, fd, 0);
-	if (relro_cache_base == MAP_FAILED) {
+	unsigned char *base = mmap(NULL, cache_size, PROT_READ, MAP_SHARED, fd, 0);
+	if (base == MAP_FAILED) {
 		error("relro cache mmap failed, err=%m");
 		LD_LOGW("prelink: relro cache mmap failed, errno=%{public}d", errno);
+		release_reserve_area(previous_area);
 		return -1;
 	}
 
-	struct relro_cache_header *header = (void *)relro_cache_base;
-	relro_cache_nr = header->dso_nr;
-	relro_cache_entries = (void *)(relro_cache_base + sizeof(*header));
+	struct relro_cache_header *header = (void *)base;
+	struct relro_cache_entry *entries = (void *)(base + sizeof(*header));
+	size_t nr = header->dso_nr;
 
-	/* validate relro cache before enable prelinking */
-	if (relro_cache_nr == 0 || cache_size <= sizeof(*header) ||
-	    (cache_size - sizeof(*header)) / relro_cache_nr <= sizeof(relro_cache_entries[0])) {
-		error("invalid relro cache");
-		LD_LOGW("prelink: invalid relro cache, nr=%{public}zu, size=%{public}zu", relro_cache_nr, cache_size);
+	if (!relro_cache_entries_ok(header, entries, reserve_address)) {
+		munmap(base, cache_size);
+		release_reserve_area(previous_area);
 		return -1;
 	}
 
+	/* Publish the globals only once the cache is fully validated. */
+	relro_cache_base = base;
+	relro_cache_nr = nr;
+	relro_cache_size = cache_size;
+	relro_cache_entries = entries;
 	relro_cache_fd = fd;
 	prelinking = true;
 
@@ -4824,6 +5030,23 @@ int dlprelink_register(int fd)
 	return rc;
 }
 
+/* Avoid leaving relro_cache_entries pointing into an unmapped range. */
+static void reset_relro_cache(void)
+{
+	if (relro_cache_base && relro_cache_base != MAP_FAILED) {
+		munmap(relro_cache_base, relro_cache_size);
+	}
+	relro_cache_base = NULL;
+	relro_cache_entries = NULL;
+	relro_cache_nr = 0;
+	relro_cache_size = 0;
+	if (relro_cache_fd >= 0) {
+		close(relro_cache_fd);
+		relro_cache_fd = -1;
+	}
+	prelinking = false;
+}
+
 static void init_relro_cache(size_t *auxv)
 {
 	relro_cache_fd = fetch_prelink_memfd();
@@ -4834,22 +5057,16 @@ static void init_relro_cache(size_t *auxv)
 	if (fcntl(relro_cache_fd, F_GET_SEALS) != RELRO_CACHE_SEALS ||
 	    fcntl(relro_cache_fd, F_SETFD, FD_CLOEXEC) < 0 ||
 	    do_dlprelink_register(relro_cache_fd) < 0) {
-		close(relro_cache_fd);
-		relro_cache_fd = -1;
-		prelinking = false;
+		reset_relro_cache();
 		return;
 	}
 
 	size_t interp_base, vdso_base;
 	struct relro_cache_header *header = (void *)relro_cache_base;
-	size_t cache_size = (size_t)header->cache_size;
 	search_vec(auxv, &interp_base, AT_BASE);
 	search_vec(auxv, &vdso_base, AT_SYSINFO_EHDR);
 	if (interp_base != header->interp_base || vdso_base != header->vdso_base) {
-		munmap(relro_cache_base, cache_size);
-		close(relro_cache_fd);
-		relro_cache_fd = -1;
-		prelinking = false;
+		reset_relro_cache();
 	}
 }
 
@@ -7662,16 +7879,24 @@ static bool task_map_library(struct loadtask *task, struct reserved_address_para
 		start_alignment = maxinum_alignment == KPMD_SIZE ? KPMD_SIZE : PAGE_SIZE;
 	}
 
+	size_t mapping_align = start_alignment > LIBRARY_ALIGNMENT ? start_alignment : LIBRARY_ALIGNMENT;
+
+	if (task->p->is_prelinked && !prelinked_range_in_reserve(task->p, map_len)) {
+		LD_LOGW("prelink: recorded address out of reserve area, loading normally");
+		task->p->is_prelinked = false;
+		del_prelinked_dso(task->p);
+	}
+
 	if (is_prelinker) {
-		if (map_len > prelinker_reserve_address_length) {
+		size_t aligned_addr = ALIGN(prelinker_reserve_address_base, mapping_align);
+		size_t next = ALIGN(aligned_addr + map_len, mapping_align);
+		if (next - prelinker_reserve_address_length > prelinker_reserve_address_base) {
 			goto error;
 		}
-		start_addr = prelinker_reserve_address_base;
+		prelinker_reserve_address_length -= next - prelinker_reserve_address_base;
+		prelinker_reserve_address_base = next;
+		start_addr = aligned_addr;
 		map_flags |= MAP_FIXED;
-		uintptr_t addr = (uintptr_t)(start_addr + map_len);
-		uintptr_t aligned_addr = (addr + LIBRARY_ALIGNMENT - 1) & ~(LIBRARY_ALIGNMENT - 1);
-		prelinker_reserve_address_length -= (aligned_addr - prelinker_reserve_address_base);
-		prelinker_reserve_address_base = aligned_addr;
 	} else if (task->p->is_prelinked) {
 		start_addr = (size_t)relro_cache_entries[task->p->relro_cache_index].base;
 		map_flags |= MAP_FIXED;
@@ -7690,7 +7915,6 @@ static bool task_map_library(struct loadtask *task, struct reserved_address_para
 	/* we will find a mapping_align aligned address as the start of dso
 	 * so we need a tmp_map_len as map_len + mapping_align to make sure
 	 * we have enough space to shift the dso to the correct location. */
-	size_t mapping_align = start_alignment > LIBRARY_ALIGNMENT ? start_alignment : LIBRARY_ALIGNMENT;
 	size_t tmp_map_len = ALIGN(map_len, mapping_align) + mapping_align - PAGE_SIZE;
 
 	/* map the whole load segments with PROT_READ first for security consideration. */
@@ -8620,7 +8844,8 @@ static int map_gnu_relro(int fd, struct dso *dso, ssize_t *file_offset)
 
 static void do_prelink(struct dso *p)
 {
-	if (!prelinking || !p->is_prelinked) {
+	/* adlt DSOs have no snapshot, so there is nothing to share. */
+	if (!prelinking || !dso_has_shared_relro(p)) {
 		return;
 	}
 
