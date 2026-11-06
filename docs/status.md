@@ -8,6 +8,11 @@ https://gitcode.com/openharmony/third_party_musl/blob/master/libc.map.txt
 https://gitcode.com/openharmony/interface_sdk_c/blob/master/third_party/musl/ndk_script/adapter/libc.ndk.json
 
 ## 系统侧libc新的变化
+2026/11/6 <stdlib.h>
+- 新增`initstate_r`: 使用指定种子和调用者提供的状态缓冲区初始化可重入伪随机数生成器
+- 新增`random_r`: 使用调用者提供的生成器状态生成伪随机数，并通过输出参数返回结果
+- 新增`srandom_r`: 为已初始化的可重入伪随机数生成器重新设置种子，重启随机数序列
+
 2026/10/31 <stdlib.h>
 - 新增`__isoc23_strtol`: 将字符串转换为long，支持C23二进制前缀
 - 新增`__isoc23_strtoul`: 将字符串转换为unsigned long，支持C23二进制前缀

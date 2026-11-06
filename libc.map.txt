@@ -1024,6 +1024,7 @@
     InitParamSelinux;
     InitParamWorkSpace;
     initstate;
+    initstate_r;
     inotify_add_watch;
     inotify_init;
     inotify_init1;
@@ -1575,6 +1576,7 @@
     rand;
     rand_r;
     random;
+    random_r;
     read;
     readahead;
     readdir;
@@ -1793,6 +1795,7 @@
     srand;
     srand48;
     srandom;
+    srandom_r;
     sscanf;
     # stack_naming;
     stat;

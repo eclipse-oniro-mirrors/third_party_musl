@@ -1031,6 +1031,7 @@ musl_src_file = [
   "src/prng/rand.c",
   "src/prng/rand_r.c",
   "src/prng/random.c",
+  "src/prng/random_r.c",
   "src/prng/seed48.c",
   "src/prng/srand48.c",
   "src/process/execl.c",
