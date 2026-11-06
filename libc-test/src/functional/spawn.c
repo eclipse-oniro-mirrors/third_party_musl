@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #ifndef _XOPEN_SOURCE
 #define _XOPEN_SOURCE 700
 #endif
@@ -38,5 +39,24 @@ int main(void)
 	TEST(read(p[0], foo, sizeof foo), 6);
 	close(p[0]);
 	TEST(posix_spawn_file_actions_destroy(&fa), 0);
+
+	/* addclosefrom_np: from<0 returns EBADF */
+	TEST(posix_spawn_file_actions_init(&fa), 0);
+	TEST(posix_spawn_file_actions_addclosefrom_np(&fa, -1), EBADF);
+	TEST(posix_spawn_file_actions_destroy(&fa), 0);
+
+	/* addclosefrom_np: close fds >= from in the child while the pipe
+	   dup'd onto stdout still works (the sync pipe fd is protected). */
+	TEST_E(!pipe(p));
+	TEST(posix_spawn_file_actions_init(&fa), 0);
+	TEST(posix_spawn_file_actions_adddup2(&fa, p[1], 1), 0);
+	TEST(posix_spawn_file_actions_addclosefrom_np(&fa, p[1]), 0);
+	TEST(posix_spawnp(&pid, "echo", &fa, 0, (char *[]){"echo","hello",0}, 0), 0);
+	close(p[1]);
+	TEST(waitpid(pid, &status, 0), pid);
+	TEST(read(p[0], foo, sizeof foo), 6);
+	close(p[0]);
+	TEST(posix_spawn_file_actions_destroy(&fa), 0);
+
 	return t_status;
 }

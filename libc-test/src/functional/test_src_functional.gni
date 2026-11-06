@@ -35,6 +35,7 @@ functional_list = [
   "qsort",
   "random",
   "random_r",
+  "rpmatch",
   "search_hsearch",
   "search_insque",
   "search_lsearch",

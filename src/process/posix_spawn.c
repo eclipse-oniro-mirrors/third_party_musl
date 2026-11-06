@@ -140,6 +140,36 @@ static int child(void *args_vp)
 				ret = __syscall(SYS_fchdir, op->fd);
 				if (ret<0) goto fail;
 				break;
+			case FDOP_CLOSEFROM: {
+#ifdef SYS_close_range
+				if (op->fd <= p) {
+					if (op->fd < p) {
+						ret = __syscall(SYS_close_range, op->fd, p-1, 0);
+					}
+					else {
+						ret = 0;
+					}
+					if (ret == 0) {
+						ret = __syscall(SYS_close_range, p+1, ~0U, 0);
+					}
+				} else {
+					ret = __syscall(SYS_close_range, op->fd, ~0U, 0);
+				}
+				if (ret != -ENOSYS) {
+					if (ret < 0) goto fail;
+					break;
+				}
+#endif
+				{
+					int maxfd = getdtablesize();
+					for (i = op->fd; i < maxfd; i++) {
+						if (i != p) {
+							__syscall(SYS_close, i);
+						}
+					}
+				}
+				break;
+			}
 			}
 		}
 	}

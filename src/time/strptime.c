@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <strings.h>
+#include "locale_impl.h"
 
 int __getzonename(const char *restrict s, struct tm *restrict tm)
 {
@@ -89,7 +90,7 @@ int __getgmtoff(const char *restrict s, struct tm *restrict tm)
     return p - s;
 }
 
-char *strptime(const char *restrict s, const char *restrict f, struct tm *restrict tm)
+char *__strptime_l(const char *restrict s, const char *restrict f, struct tm *restrict tm, locale_t loc)
 {
 	int i, w, neg, adj, min, range, *dest, dummy;
 	const char *ex;
@@ -125,7 +126,7 @@ char *strptime(const char *restrict s, const char *restrict f, struct tm *restri
 			range = 12;
 			goto symbolic_range;
 		case 'c':
-			s = strptime(s, nl_langinfo(D_T_FMT), tm);
+			s = __strptime_l(s, __nl_langinfo_l(D_T_FMT, loc), tm, loc);
 			if (!s) return 0;
 			break;
 		case 'C':
@@ -139,11 +140,11 @@ char *strptime(const char *restrict s, const char *restrict f, struct tm *restri
 			range = 31;
 			goto numeric_range;
 		case 'D':
-			s = strptime(s, "%m/%d/%y", tm);
+			s = __strptime_l(s, "%m/%d/%y", tm, loc);
 			if (!s) return 0;
 			break;
 		case 'F':
-			s = strptime(s, "%Y-%m-%d", tm);
+			s = __strptime_l(s, "%Y-%m-%d", tm, loc);
 			if (!s) {
 				return 0;
 			}
@@ -194,14 +195,14 @@ char *strptime(const char *restrict s, const char *restrict f, struct tm *restri
 			break;
 		case 'p':
 		case 'P':
-			ex = nl_langinfo(AM_STR);
+			ex = __nl_langinfo_l(AM_STR, loc);
 			len = strlen(ex);
 			if (!strncasecmp(s, ex, len)) {
 				tm->tm_hour %= 12;
 				s += len;
 				break;
 			}
-			ex = nl_langinfo(PM_STR);
+			ex = __nl_langinfo_l(PM_STR, loc);
 			len = strlen(ex);
 			if (!strncasecmp(s, ex, len)) {
 				tm->tm_hour %= 12;
@@ -211,11 +212,11 @@ char *strptime(const char *restrict s, const char *restrict f, struct tm *restri
 			}
 			return 0;
 		case 'r':
-			s = strptime(s, nl_langinfo(T_FMT_AMPM), tm);
+			s = __strptime_l(s, __nl_langinfo_l(T_FMT_AMPM, loc), tm, loc);
 			if (!s) return 0;
 			break;
 		case 'R':
-			s = strptime(s, "%H:%M", tm);
+			s = __strptime_l(s, "%H:%M", tm, loc);
 			if (!s) return 0;
 			break;
 		case 's': {
@@ -239,7 +240,7 @@ char *strptime(const char *restrict s, const char *restrict f, struct tm *restri
 			range = 61;
 			goto numeric_range;
 		case 'T':
-			s = strptime(s, "%H:%M:%S", tm);
+			s = __strptime_l(s, "%H:%M:%S", tm, loc);
 			if (!s) return 0;
 			break;
 		case 'u': {
@@ -272,7 +273,7 @@ char *strptime(const char *restrict s, const char *restrict f, struct tm *restri
 			range = 7;
 			goto numeric_range;
 		case 'v':
-			if (!(s = strptime(s, "%e-%b-%Y", tm))) {
+			if (!(s = __strptime_l(s, "%e-%b-%Y", tm, loc))) {
 				return 0;
 			}
 			break;
@@ -293,11 +294,11 @@ char *strptime(const char *restrict s, const char *restrict f, struct tm *restri
 			continue;
 		}
 		case 'x':
-			s = strptime(s, nl_langinfo(D_FMT), tm);
+			s = __strptime_l(s, __nl_langinfo_l(D_FMT, loc), tm, loc);
 			if (!s) return 0;
 			break;
 		case 'X':
-			s = strptime(s, nl_langinfo(T_FMT), tm);
+			s = __strptime_l(s, __nl_langinfo_l(T_FMT, loc), tm, loc);
 			if (!s) return 0;
 			break;
 		case 'y':
@@ -347,7 +348,7 @@ char *strptime(const char *restrict s, const char *restrict f, struct tm *restri
 			goto update;
 		symbolic_range:
 			for (i=2*range-1; i>=0; i--) {
-				ex = nl_langinfo(min+i);
+				ex = __nl_langinfo_l(min+i, loc);
 				len = strlen(ex);
 				if (strncasecmp(s, ex, len)) continue;
 				s += len;
@@ -368,3 +369,10 @@ char *strptime(const char *restrict s, const char *restrict f, struct tm *restri
 	}
 	return (char *)s;
 }
+
+char *strptime(const char *restrict s, const char *restrict f, struct tm *restrict tm)
+{
+	return __strptime_l(s, f, tm, CURRENT_LOCALE);
+}
+
+weak_alias(__strptime_l, strptime_l);
