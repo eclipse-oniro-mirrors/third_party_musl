@@ -20,6 +20,10 @@ extern "C" {
 #define __NEED_size_t
 #define __NEED_wchar_t
 
+#if defined(_GNU_SOURCE) || defined(_BSD_SOURCE)
+#define __NEED_int32_t
+#endif
+
 #include <bits/alltypes.h>
 
 int atoi (const char *);
@@ -160,6 +164,18 @@ void lcong48 (unsigned short [7]);
 
 #if defined(_GNU_SOURCE) || defined(_BSD_SOURCE)
 #include <alloca.h>
+struct random_data {
+	int32_t *fptr;
+	int32_t *rptr;
+	int32_t *state;
+	int rand_type;
+	int rand_deg;
+	int rand_sep;
+	int32_t *end_ptr;
+};
+int random_r (struct random_data *__restrict, int32_t *__restrict);
+int srandom_r (unsigned, struct random_data *);
+int initstate_r (unsigned, char *__restrict, size_t, struct random_data *__restrict);
 char *mktemp (char *);
 int mkstemps (char *, int);
 int mkostemps (char *, int, int);

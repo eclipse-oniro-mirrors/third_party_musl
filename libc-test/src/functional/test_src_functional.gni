@@ -34,6 +34,7 @@ functional_list = [
   "pthread_getname_np",
   "qsort",
   "random",
+  "random_r",
   "search_hsearch",
   "search_insque",
   "search_lsearch",

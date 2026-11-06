@@ -15,6 +15,22 @@ T(ldiv_t)
 T(lldiv_t)
 T(size_t)
 T(wchar_t)
+#if defined(_GNU_SOURCE) || defined(_BSD_SOURCE)
+T(int32_t)
+T(struct random_data)
+{struct random_data x;
+F(int32_t*,fptr)
+F(int32_t*,rptr)
+F(int32_t*,state)
+F(int,rand_type)
+F(int,rand_deg)
+F(int,rand_sep)
+F(int32_t*,end_ptr)
+}
+{int(*p)(struct random_data*restrict,int32_t*restrict) = random_r;}
+{int(*p)(unsigned,struct random_data*) = srandom_r;}
+{int(*p)(unsigned,char*restrict,size_t,struct random_data*restrict) = initstate_r;}
+#endif
 #ifdef _POSIX_C_SOURCE
 C(WEXITSTATUS(0))
 C(WIFEXITED(0))
