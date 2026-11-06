@@ -18,6 +18,7 @@
 #ifdef USE_GWP_ASAN
 
 #include <dlfcn.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stddef.h>
 
@@ -53,6 +54,44 @@ typedef struct unwind_info {
 
 size_t libc_gwp_asan_unwind_fast(size_t *frame_buf, size_t max_record_stack);
 size_t libc_gwp_asan_unwind_segv(size_t *frame_buf, size_t max_record_stack, void *signal_context);
+
+/*
+ * Custom unwind backend for GWP-ASan.
+ *
+ * Contract:
+ *   - Appends frames at frame_buf[num_frames .. max_record_stack-1] and
+ *     returns the total frame count, which MUST NOT exceed max_record_stack.
+ *   - Frames already present in frame_buf[0 .. num_frames-1] must be kept.
+ *   - stack_start/stack_end/current_frame_addr delimit the current stack.
+ *
+ * The callback may be invoked from a SIGSEGV handler (crash reporting path),
+ * so it MUST be async-signal-safe.
+ *
+ * Registration is process-global: the callback takes effect for all threads
+ * once registered. A later registration replaces the earlier one (last wins).
+ * Pass NULL to libc_gwp_asan_set_unwind_callbacks to unregister and fall back
+ * to the frame-pointer unwinder. Same-thread reentry does not call the
+ * callback again and uses the frame-pointer unwinder.
+ */
+#define GWP_ASAN_UNWIND_ABI_VERSION 1
+
+typedef size_t (*gwp_asan_unwind_callback)(
+    size_t *frame_buf, size_t num_frames, size_t max_record_stack,
+    size_t current_frame_addr, size_t stack_start, size_t stack_end);
+
+typedef struct gwp_asan_unwind_callbacks {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    gwp_asan_unwind_callback unwind;
+} gwp_asan_unwind_callbacks;
+
+enum {
+    GWP_ASAN_UNWIND_REGISTER_OK = 0,
+    GWP_ASAN_UNWIND_REGISTER_INVALID_ARGUMENT = 1,
+    GWP_ASAN_UNWIND_REGISTER_UNSUPPORTED_ABI = 2
+};
+
+int libc_gwp_asan_set_unwind_callbacks(const gwp_asan_unwind_callbacks *callbacks);
 size_t libc_gwp_asan_collect_allocations_by_time_range(uint64_t timespan, uintptr_t *buffer,
                                                        size_t max_count, size_t depth);
 
