@@ -93,7 +93,8 @@ functional_list = [
   "dlopen_weaklink",
   "dlprelink",
   "dlopen_prelink",
-  "dlopen_ani"
+  "dlopen_ani",
+  "appuid_func"
 ]
 
 if (musl_use_pthread_cancel) {

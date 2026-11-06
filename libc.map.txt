@@ -948,6 +948,7 @@
     getusershell;
     getutent;
     getutid;
+    getappuid;
     getutline;
     getutxent;
     getutxid;
@@ -1727,6 +1728,7 @@
     SetAsyncStackCallbackFunc;
     settimeofday;
     setuid;
+    setappuid;
     setusershell;
     setutent;
     setutxent;
