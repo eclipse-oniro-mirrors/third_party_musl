@@ -41,4 +41,5 @@ functionalext_list = [
   "ohos_dfx_log:ohos_dfx_log",
   "string:functionalext_string_test",
   "adlt:functionalext_adlt_test",
+  "prelink:functionalext_prelink_test",
 ]

@@ -264,7 +264,6 @@ if (musl_arch == "arm") {
 musl_src_file = [
   "src/internal/pthread_impl.h",
   "src/internal/locale_impl.h",
-  "src/internal/locale_impl.c",
   "src/internal/stdio_impl.h",
   "src/internal/scanf_impl.h",
   "src/internal/unsupported_api.h",
@@ -392,6 +391,7 @@ musl_src_file = [
   "src/ctype/wcswidth.c",
   "src/ctype/wctrans.c",
   "src/ctype/wcwidth.c",
+  "src/internal/locale_impl.c",
   "src/dirent/alphasort.c",
   "src/dirent/closedir.c",
   "src/dirent/dirfd.c",
@@ -1594,6 +1594,7 @@ musl_src_file = [
   "src/unistd/getppid.c",
   "src/unistd/getsid.c",
   "src/unistd/getuid.c",
+  "src/unistd/userid.c",
   "src/unistd/isatty.c",
   "src/unistd/lchown.c",
   "src/unistd/link.c",
