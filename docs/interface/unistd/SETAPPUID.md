@@ -60,17 +60,21 @@ This is a platform-specific extension and is not part of any POSIX standard.
 ```c
 #include <unistd.h>
 #include <stdio.h>
+#include <errno.h>
+#include <string.h>
 
 int main(void)
 {
-    /* Set the app uid to 180 (requires appropriate privileges). */
-    int ret = setappuid(180);
-    if (ret == 0) {
+    uid_t uid = 180;
+    int ret = setappuid(uid);
+    if (ret == 0 && errno == ENOTSUP) {
+        printf("fallback to setuid, real uid changed (not token uid)\n");
+    } else if (ret == 0) {
         printf("app uid is now: %u\n", getappuid());
     } else {
-        printf("setappuid failed, ret = %d\n", ret);
+        printf("setappuid failed, ret = %d, errno = %d (%s)\n",
+               ret, errno, strerror(errno));
     }
-
     return 0;
 }
 ```

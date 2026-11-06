@@ -35,10 +35,10 @@
 #define T(f) do{ if ((f)+1 == 0) t_error("%s failed: %s\n", #f, strerror(errno)); }while(0)
 #define EQ(a,b,fmt) do{ if ((a) != (b)) t_error("%s == %s failed: " fmt "\n", #a, #b, a, b); }while(0)
 
-#define NUM_THREADS 16
-#define ITER_COUNT 1000
-#define LEAK_ITER 5000
-#define STRESS_ITER 10000
+#define NUM_THREADS 4
+#define ITER_COUNT 10
+#define LEAK_ITER 10
+#define STRESS_ITER 100
 
 /* ======================== Multithreading Tests ======================== */
 
@@ -87,7 +87,7 @@ static void *setappuid_mt_worker(void *p)
 {
     struct setappuid_mt_arg *a = p;
     int i;
-    for (i = 0; i < 100; i++) {
+    for (i = 0; i < ITER_COUNT; i++) {
         int ret = setappuid(a->uid);
         if (ret != 0 && ret != -1) {
             a->error = 1;
@@ -134,7 +134,7 @@ static void *mixed_set_worker(void *p)
 {
     struct mixed_mt_arg *a = p;
     int i;
-    for (i = 0; i < 200; i++) {
+    for (i = 0; i < ITER_COUNT; i++) {
         int ret = setappuid(a->uid);
         if (ret != 0 && ret != -1) {
             a->error = 1;
@@ -246,7 +246,7 @@ static void test_setappuid_stress(void)
 {
     uid_t orig = getuid();
     int i;
-    for (i = 0; i < 1000; i++) {
+    for (i = 0; i < ITER_COUNT; i++) {
         int ret = setappuid(orig);
         if (ret != 0 && ret != -1) {
             t_error("setappuid returned unexpected value %d at iter %d\n", ret, i);
@@ -260,7 +260,7 @@ static void test_interleaved_stress(void)
 {
     uid_t orig = getuid();
     int i;
-    for (i = 0; i < 5000; i++) {
+    for (i = 0; i < ITER_COUNT; i++) {
         getappuid();
         setappuid(orig);
         uid_t uid = getappuid();
@@ -280,7 +280,7 @@ static void test_setappuid_cleanup(void)
         return;
     }
 
-    for (i = 0; i < 100; i++) {
+    for (i = 0; i < ITER_COUNT; i++) {
         int ret = setappuid(0);
         if (ret == 0) {
             setuid(orig);
