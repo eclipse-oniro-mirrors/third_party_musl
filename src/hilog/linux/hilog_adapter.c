@@ -33,6 +33,7 @@
 #include <atomic.h>
 
 #include "hilog_common.h"
+#include "syscall.h"
 #ifdef OHOS_ENABLE_PARAMETER
 #include "sys_param.h"
 #endif
@@ -179,7 +180,8 @@ static int SendMessage(HilogMsg *header, const char *tag, uint16_t tagLen, const
     vec[1].iov_len = tagLen;                    // 1 : index of log tag
     vec[2].iov_base = (void *)((char *)(fmt));  // 2 : index of log content
     vec[2].iov_len = fmtLen;                    // 2 : index of log content
-    int ret = TEMP_FAILURE_RETRY(writev(socketFd, vec, LOG_LEN));
+    /* Send internal diagnostics without re-entering io_guard. */
+    int ret = TEMP_FAILURE_RETRY(syscall_cp(SYS_writev, socketFd, vec, LOG_LEN));
     if (releaseSocket) {
         __close(socketFd);
     }

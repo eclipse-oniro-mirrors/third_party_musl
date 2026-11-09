@@ -3,9 +3,17 @@
 #include <string.h>
 #include <errno.h>
 #include "syscall.h"
+#ifdef IO_GUARD_ENABLE
+#include "io_guard_impl.h"
+#endif
 
 ssize_t sendmsg(int fd, const struct msghdr *msg, int flags)
 {
+#ifdef IO_GUARD_ENABLE
+	if (__io_guard_check(fd, 0) < 0) {
+		return -1;
+	}
+#endif
 #if LONG_MAX > INT_MAX
 	struct msghdr h;
 	/* Kernels before 2.6.38 set SCM_MAX_FD to 255, allocate enough

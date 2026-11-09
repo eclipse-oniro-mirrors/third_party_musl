@@ -3,6 +3,9 @@
 #include <stdarg.h>
 #include <errno.h>
 #include "syscall.h"
+#ifdef IO_GUARD_ENABLE
+#include "io_guard_impl.h"
+#endif
 
 int fcntl(int fd, int cmd, ...)
 {
@@ -11,6 +14,13 @@ int fcntl(int fd, int cmd, ...)
 	va_start(ap, cmd);
 	arg = va_arg(ap, unsigned long);
 	va_end(ap);
+#ifdef IO_GUARD_ENABLE
+	if (cmd == F_DUPFD || cmd == F_DUPFD_CLOEXEC) {
+		if (__io_guard_check(fd, 0) < 0) {
+			return -1;
+		}
+	}
+#endif
 #ifndef __LITEOS_A__
 	if (cmd == F_SETFL) arg |= O_LARGEFILE;
 #endif

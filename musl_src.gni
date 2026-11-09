@@ -1683,6 +1683,8 @@ musl_src_file = [
   "src/dfx/dfx_signal_handler_stub.c",
 ]
 
+musl_io_guard_enabled = musl_enable_io_guard
+
 if (musl_arch == "arm") {
   musl_src_filterout = [
     "src/fenv/fenv.c",
@@ -1856,6 +1858,8 @@ if (musl_arch == "arm") {
     "src/thread/syscall_cp.c",
   ]
 } else if (musl_arch == "riscv32" || musl_arch == "cortex_m") {
+  # Keep io_guard excluded alongside fdsan in this source-filter branch.
+  musl_io_guard_enabled = false
   musl_src_filterout = [
     "src/aio/aio.c",
     "src/aio/aio_suspend.c",
@@ -2490,6 +2494,14 @@ if (musl_arch == "arm") {
   }
 }
 
+if (musl_io_guard_enabled) {
+  musl_src_file += [
+    "src/internal/io_guard_impl.h",
+    "interfaces/inner_api/io_guard.h",
+    "src/io_guard/io_guard.c",
+  ]
+}
+
 musl_src_ldso = [
   "ldso/dlstart.c",
   "ldso/dynlink.c",
@@ -3024,6 +3036,7 @@ musl_src_files_ext = [
   "src/exit/linux/assert.c",
   "src/exit/linux/atexit.c",
   "src/fdsan/linux/fdsan.c",
+  "src/io_guard/linux/io_guard.c",
   "src/fortify/linux/fortify.c",
   "src/gwp_asan/linux/gwp_asan.c",
   "src/gwp_asan/linux/gwp_asan.h",
@@ -3146,6 +3159,7 @@ musl_src_linux_files = [
   "src/exit/assert.c",
   "src/exit/atexit.c",
   "src/fdsan/fdsan.c",
+  "src/io_guard/io_guard.c",
   "src/fortify/fortify.c",
   "src/gwp_asan/gwp_asan.c",
   "src/gwp_asan/gwp_asan.h",

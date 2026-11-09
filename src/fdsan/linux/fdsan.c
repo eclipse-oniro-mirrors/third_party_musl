@@ -29,6 +29,9 @@
 
 #include "musl_log.h"
 #include "musl_fdsan.h"
+#ifdef IO_GUARD_ENABLE
+#include "io_guard_impl.h"
+#endif
 #include "libc.h"
 #include "pthread_impl.h"
 #include "hilog_adapter.h"
@@ -279,6 +282,14 @@ void fdsan_exchange_owner_tag(int fd, uint64_t expected_tag, uint64_t new_tag)
 
 int fdsan_close_with_tag(int fd, uint64_t expected_tag)
 {
+#ifdef IO_GUARD_ENABLE
+	/* Reject before the fdsan tag is cleared so a blocked close leaves
+	 * ownership state untouched. __close keeps its own check for callers
+	 * that reach the internal close path directly. */
+	if (__io_guard_check(fd, 0) < 0) {
+		return -1;
+	}
+#endif
 	if (__pthread_self()->by_vfork) {
 		 return __close(fd);
 	}

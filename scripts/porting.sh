@@ -43,6 +43,7 @@ cp -rfp ${SRC_DIR}/src/linux/aarch64/linux/* ${DST_DIR}/src/linux/aarch64
 cp -rfp ${SRC_DIR}/src/linux/x86_64/linux/* ${DST_DIR}/src/linux/x86_64
 cp -rfp ${SRC_DIR}/src/exit/linux/* ${DST_DIR}/src/exit
 cp -rfp ${SRC_DIR}/src/fdsan/linux/* ${DST_DIR}/src/fdsan
+cp -rfp ${SRC_DIR}/src/io_guard/linux/* ${DST_DIR}/src/io_guard
 cp -rfp ${SRC_DIR}/src/fortify/linux/* ${DST_DIR}/src/fortify
 cp -rfp ${SRC_DIR}/src/gwp_asan/linux/* ${DST_DIR}/src/gwp_asan
 cp -rfp ${SRC_DIR}/src/hilog/linux/* ${DST_DIR}/src/hilog
