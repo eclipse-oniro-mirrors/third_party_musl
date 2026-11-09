@@ -822,19 +822,22 @@ int libc_gwp_asan_set_unwind_callbacks(const gwp_asan_unwind_callbacks *callback
     }
     if (callbacks->struct_size < sizeof(*callbacks)) {
         ret = GWP_ASAN_UNWIND_REGISTER_INVALID_ARGUMENT;
-        MUSL_LOGW("[gwp_asan]: libc_gwp_asan_set_unwind_callbacks register failed, invalid struct_size:%{public}u, ret:%{public}d.",
+        MUSL_LOGW("[gwp_asan]: libc_gwp_asan_set_unwind_callbacks register failed, "
+                  "invalid struct_size:%{public}u, ret:%{public}d.",
                   callbacks->struct_size, ret);
         return ret;
     }
     if (callbacks->abi_version != GWP_ASAN_UNWIND_ABI_VERSION) {
         ret = GWP_ASAN_UNWIND_REGISTER_UNSUPPORTED_ABI;
-        MUSL_LOGW("[gwp_asan]: libc_gwp_asan_set_unwind_callbacks register failed, unsupported abi:%{public}u, ret:%{public}d.",
+        MUSL_LOGW("[gwp_asan]: libc_gwp_asan_set_unwind_callbacks register failed, "
+                  "unsupported abi:%{public}u, ret:%{public}d.",
                   callbacks->abi_version, ret);
         return ret;
     }
     if (!callbacks->unwind) {
         ret = GWP_ASAN_UNWIND_REGISTER_INVALID_ARGUMENT;
-        MUSL_LOGW("[gwp_asan]: libc_gwp_asan_set_unwind_callbacks register failed, unwind is null, ret:%{public}d.", ret);
+        MUSL_LOGW("[gwp_asan]: libc_gwp_asan_set_unwind_callbacks register failed, "
+                  "unwind is null, ret:%{public}d.", ret);
         return ret;
     }
 
