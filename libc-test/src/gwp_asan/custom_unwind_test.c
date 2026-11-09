@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 
-#define _GNU_SOURCE
 #include <string.h>
 #if defined(__aarch64__)
 #include <ucontext.h>
