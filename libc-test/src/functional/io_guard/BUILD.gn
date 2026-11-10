@@ -15,14 +15,6 @@ import("//build/test.gni")
 import("../../../../musl_src.gni")
 
 if (musl_io_guard_enabled) {
-  if (current_cpu == "arm") {
-    io_guard_arch = "arm"
-  } else if (current_cpu == "arm64") {
-    io_guard_arch = "aarch64"
-  } else if (current_cpu == "x86_64") {
-    io_guard_arch = "x86_64"
-  }
-
   io_guard_musl_dir = "${root_out_dir}/obj/third_party/musl/usr"
   io_guard_write_tests = [
     "io_guard_write",
@@ -73,7 +65,7 @@ if (musl_io_guard_enabled) {
       configs = [ "//third_party/musl:io_guard_inner_config" ]
       include_dirs = [
         "//third_party/musl/libc-test/src/common",
-        "//${io_guard_musl_dir}/include/${io_guard_arch}-linux-ohos",
+        "//${io_guard_musl_dir}/include/${musl_target_triple}",
       ]
       data_deps = [ "//third_party/musl/libc-test/src/common:libtest" ]
       ldflags = [ "-nostdlib" ]
