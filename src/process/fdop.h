@@ -3,6 +3,7 @@
 #define FDOP_OPEN 3
 #define FDOP_CHDIR 4
 #define FDOP_FCHDIR 5
+#define FDOP_CLOSEFROM 6
 
 struct fdop {
 	struct fdop *next, *prev;

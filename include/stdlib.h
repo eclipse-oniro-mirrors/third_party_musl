@@ -183,6 +183,7 @@ void *valloc (size_t);
 void *memalign(size_t, size_t);
 int getloadavg(double *, int);
 int clearenv(void);
+int rpmatch(const char *);
 #define WCOREDUMP(s) ((s) & 0x80)
 #define WIFCONTINUED(s) ((s) == 0xffff)
 void *reallocarray (void *, size_t, size_t);

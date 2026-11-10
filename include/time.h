@@ -126,6 +126,7 @@ extern char *tzname[2];
 
 #if defined(_XOPEN_SOURCE) || defined(_BSD_SOURCE) || defined(_GNU_SOURCE)
 char *strptime (const char *__restrict, const char *__restrict, struct tm *__restrict);
+char *strptime_l (const char *__restrict, const char *__restrict, struct tm *__restrict, locale_t);
 extern int daylight;
 extern long timezone;
 extern int getdate_err;

@@ -1,3 +1,24 @@
+/*
+ * Copyright (c) 2026 Huawei Device Co., Ltd.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to
+ * deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ */
 // SPDX-License-Identifier: MIT
 
 #define _GNU_SOURCE	/* For tm_gmtoff */
@@ -5,6 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <locale.h>
 #include "test.h"
 
 /**
@@ -50,6 +72,53 @@ static void checkStrptimeTz(const char *s, int h, int m) {
 	}
 }
 
+static void checkStrptimeL(const char *s, const char *format, const struct tm *expected) {
+	locale_t loc = newlocale(LC_ALL_MASK, "C", NULL);
+	struct tm tm = { };
+	const char *ret;
+
+	if (loc == NULL) {
+		t_error("newlocale(\"C\") failed\n");
+		return;
+	}
+
+	ret = strptime_l(s, format, &tm, loc);
+	if (!ret || *ret != '\0') {
+		t_error("\"%s\": failed to parse \"%s\"\n", format, s);
+	} else if (tm.tm_sec != expected->tm_sec ||
+		   tm.tm_min != expected->tm_min ||
+		   tm.tm_hour != expected->tm_hour ||
+		   tm.tm_mday != expected->tm_mday ||
+		   tm.tm_mon != expected->tm_mon ||
+		   tm.tm_year != expected->tm_year) {
+		char buf1[64];
+		char buf2[64];
+
+		strftime(buf1, sizeof(buf1), "%FT%H:%M:%S%Z", expected);
+		strftime(buf2, sizeof(buf2), "%FT%H:%M:%S%Z", &tm);
+
+		t_error("\"%s\": for \"%s\" expected %s but got %s\n", format, s, buf1, buf2);
+	}
+	freelocale(loc);
+}
+
+static void checkStrptimeLMismatch(const char *s, const char *format) {
+	locale_t loc = newlocale(LC_ALL_MASK, "C", NULL);
+	struct tm tm = { };
+	const char *ret;
+
+	if (loc == NULL) {
+		t_error("newlocale(\"C\") failed\n");
+		return;
+	}
+
+	ret = strptime_l(s, format, &tm, loc);
+	if (ret != NULL) {
+		t_error("\"%s\": expected mismatch for \"%s\"\n", format, s);
+	}
+	freelocale(loc);
+}
+
 static struct tm tm1 = {
 	.tm_sec = 8,
 	.tm_min = 57,
@@ -86,6 +155,15 @@ static struct tm tm4 = {
 	.tm_year = 1856 - 1900,
 };
 
+static struct tm tm5 = {
+	.tm_sec = 0,
+	.tm_min = 0,
+	.tm_hour = 0,
+	.tm_mday = 28,
+	.tm_mon = 10 - 1,
+	.tm_year = 2026 - 1900,
+};
+
 int main() {
 	setenv("TZ", "UTC0", 1);
 
@@ -113,6 +191,11 @@ int main() {
 	checkStrptimeTz("+0200", 2, 0);
 	checkStrptimeTz("-0530", -5, -30);
 	checkStrptimeTz("-06", -6, 0);
+
+	/* strptime_l with "C" locale */
+	checkStrptimeL("2026-10-28", "%Y-%m-%d", &tm5);
+	checkStrptimeL("20:57:08", "%H:%M:%S", &tm1);
+	checkStrptimeLMismatch("hello", "%Y-%m-%d");
 
 	return t_status;
 }
