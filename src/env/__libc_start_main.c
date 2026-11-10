@@ -85,8 +85,12 @@ int __libc_start_main(int (*main)(int,char **,char **), int argc, char **argv,
 	void (*init_dummy)(), void(*fini_dummy)(), void(*ldso_dummy)())
 {
 	char **envp = argv+argc+1;
-
-	__libc_stack_end = __builtin_frame_address(0);
+	/* In static linking, __libc_stack_end is not initialized by the dynamic linker.
+	 * Set it to argv - 1 (where argc resides), consistent with dynamic linking 
+	 * where sp points to argc. */
+	if (!__libc_stack_end) {
+		__libc_stack_end = argv - 1;
+	}
 
 #ifdef ENABLE_HWASAN
 	libc.load_hook = __hwasan_library_loaded;
