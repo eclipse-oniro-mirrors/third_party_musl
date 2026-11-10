@@ -271,7 +271,7 @@ int res_msend_rc_ext(int netid, int nqueries, const unsigned char *const *querie
 	int last_retry = 0;
 	int nres_v6 = 0;
 	bool no_valid_v4[2] = { false, false };
-	uint8_t nres_invalid_v4 = 0;
+	int nres_invalid_v4 = 0;
 	int v4_sent_this_round = 0;
 	int v4_recv_this_round = 0;
 	int v4_invalid_this_round = 0;
@@ -530,6 +530,21 @@ int res_msend_rc_ext(int netid, int nqueries, const unsigned char *const *querie
 #endif
 				}
 			}
+#if OHOS_DNS_PROXY_BY_NETSYS
+			/* Queries of this round have been re-sent for the unfinished
+			 * slots, so restore the UDP receive path in sync: a previous
+			 * round may have exhausted retry and parked next at nqueries
+			 * with pfd[nqueries].events cleared. Without resetting them,
+			 * responses of this round can never be read or counted, and
+			 * fast retry takes effect at most once. */
+			for (i = 0; i < nqueries; i++) {
+				if (!alens[i] || no_valid_v4[i]) {
+					next = i;    /* first slot still waiting for a response */
+					break;
+				}
+			}
+			pfd[nqueries].events = POLLIN;
+#endif
 			t1 = t2;
 			servfail_retry = 2 * nqueries;
 		}
@@ -674,11 +689,35 @@ int res_msend_rc_ext(int netid, int nqueries, const unsigned char *const *querie
 					break;
 				}
 			case 2:
-				if (servfail_retry && servfail_retry--)
-					sendto(fd, queries[i],
+				if (servfail_retry && servfail_retry--) {
+					r = sendto(fd, queries[i],
 						qlens[i], MSG_NOSIGNAL,
 						(void *)&ns[j], sl);
+#if OHOS_DNS_PROXY_BY_NETSYS
+					/* The retransmission is a v4 A query actually sent in
+					 * this round, so it must be counted in
+					 * v4_sent_this_round: the recv >= sent condition can
+					 * only hold after the retransmitted response returns,
+					 * guaranteeing no in-flight query exists when fast
+					 * retry triggers and preventing the retransmitted
+					 * result from being discarded early. */
+					if (r >= 0 && is_v4_a_response) {
+						v4_sent_this_round++;
+					}
+#endif
+				}
+				/* FALLTHROUGH */
 			default:
+#if OHOS_DNS_PROXY_BY_NETSYS
+				/* Responses such as SERVFAIL/REFUSED/FORMERR/NOTIMP carry
+				 * no usable A record; count them as invalid responses of
+				 * this round so that the "all responses of this round are
+				 * invalid" fast-retry check can trigger and
+				 * such queries no longer wait for a full retry_interval. */
+				if (is_v4_a_response) {
+					v4_invalid_this_round++;
+				}
+#endif
 				continue;
 			}
 
@@ -728,8 +767,9 @@ int res_msend_rc_ext(int netid, int nqueries, const unsigned char *const *querie
 					if (multiV4) {
 						last_retry = retry[i];
 					}
-					if (next >= nqueries) {
+					if (next > i) {
 						next = i;
+						pfd[nqueries].events = POLLIN;
 					}
 					continue;
 				}
