@@ -230,6 +230,9 @@ static struct fdpic_loadmap *app_loadmap;
 static struct fdpic_dummy_loadmap app_dummy_loadmap;
 static struct icall_item pac_items[PAC_MODIFIER_SIZE] = {0};
 static bool check_abs_path = true;
+#ifdef ENABLE_DLOPEN_RELATIVE_PATH
+static bool g_relative_path_enabled = false;
+#endif
 static struct dso *libc_dso = NULL;
 static char g_process_name_buf[PROCESS_NAME_BUF_LEN];
 static bool g_process_name_init_done;
@@ -354,6 +357,15 @@ void dlopen_config_abs_path_policy(bool flag)
 	}
 	pthread_rwlock_unlock(&lock);
 }
+
+#ifdef ENABLE_DLOPEN_RELATIVE_PATH
+void dlopen_enable_relative_path(void)
+{
+	pthread_rwlock_wrlock(&lock);
+	g_relative_path_enabled = true;
+	pthread_rwlock_unlock(&lock);
+}
+#endif
 
 __attribute__((always_inline))
 static bool check_acceptable(ns_inherit *inherit, const char *lib_name)
@@ -3018,6 +3030,44 @@ UT_STATIC struct dso *find_library_by_fstat(const struct stat *st, const ns_t *n
 	return NULL;
 }
 
+#ifdef ENABLE_DLOPEN_RELATIVE_PATH
+/* Resolve the fd path locally so this helper builds in both loader variants
+ * without moving the existing fd_to_realpath out of the randomization path. */
+static int open_relative_library(const char *name, ns_t *ns, bool check_inherited, char *buf, size_t size)
+{
+	int fd = open(name, O_RDONLY | O_CLOEXEC);
+	if (fd < 0) {
+		return fd;
+	}
+	char proc_self_fd[32];
+	int ret = snprintf(proc_self_fd, sizeof(proc_self_fd), "/proc/self/fd/%d", fd);
+	if (ret < 0 || ret >= sizeof(proc_self_fd)) {
+		close(fd);
+		return -1;
+	}
+	ssize_t len = readlink(proc_self_fd, buf, size);
+	if (len < 0 || len >= size) {
+		LD_LOGW("load relative_path %{public}s: failed to resolve fd path.", name);
+		close(fd);
+		return -1;
+	}
+	buf[len] = '\0';
+	if (buf[0] != '/') {
+		LD_LOGW("load relative_path %{public}s: resolved path is not absolute.", name);
+		close(fd);
+		return -1;
+	}
+	if (!is_accessible(ns, buf, g_is_asan, check_inherited)) {
+		LD_LOGW("load relative_path %{public}s resolved to %{public}s: check ns accessible failed namespace=%{public}s.",
+			name, buf, ns ? ns->ns_name : "NULL");
+		close(fd);
+		errno = EACCES;
+		return -1;
+	}
+	return fd;
+}
+#endif
+
 #ifndef LOAD_ORDER_RANDOMIZATION
 /* add namespace function */
 struct dso *load_library(
@@ -3079,13 +3129,21 @@ struct dso *load_library(
 	if (strchr(name, '/')) {
 		pathname = name;
 
-		if (!is_accessible(namespace, pathname, g_is_asan, check_inherited)) {
-			fd = -1;
-			LD_LOGD("load_library is_accessible return false,fd = -1");
+#ifdef ENABLE_DLOPEN_RELATIVE_PATH
+		if (g_relative_path_enabled && name[0] != '/') {
+			fd = open_relative_library(name, namespace, check_inherited, buf, sizeof buf);
 		} else {
-			fd = open(name, O_RDONLY|O_CLOEXEC);
-			LD_LOGD("load_library is_accessible return true, open file fd:%{public}d .", fd);
+#endif
+			if (!is_accessible(namespace, pathname, g_is_asan, check_inherited)) {
+				fd = -1;
+				LD_LOGD("load_library is_accessible return false,fd = -1");
+			} else {
+				fd = open(name, O_RDONLY|O_CLOEXEC);
+				LD_LOGD("load_library is_accessible return true, open file fd:%{public}d .", fd);
+			}
+#ifdef ENABLE_DLOPEN_RELATIVE_PATH
 		}
+#endif
 	} else {
 		/* Search for the name to see if it's already loaded */
 		/* Search in namespace */
@@ -5127,6 +5185,9 @@ void __dls3(size_t *sp, size_t *auxv, size_t *aux)
 	InstallPACHandler();
 #endif
 	check_abs_path = true;
+#ifdef ENABLE_DLOPEN_RELATIVE_PATH
+	g_relative_path_enabled = false;
+#endif
 	__init_fdsan();
 #ifdef IO_GUARD_ENABLE
 	__init_io_guard();
@@ -8235,14 +8296,26 @@ static bool load_library_header(struct loadtask *task)
 				}
 			} else {
 				task->pathname = name;
-				if (!is_accessible(namespace, task->pathname, g_is_asan, check_inherited)) {
-					LD_LOGW("load absolute_path %{public}s: check ns accessible failed namespace=%{public}s.",
-							task->pathname, namespace ? namespace->ns_name : "NULL");
-					task->fd = -1;
+#ifdef ENABLE_DLOPEN_RELATIVE_PATH
+				if (g_relative_path_enabled && name[0] != '/') {
+					task->fd = open_relative_library(name, namespace, check_inherited, task->buf, sizeof task->buf);
+					if (task->fd >= 0) {
+						/* ADLT needs the original symlink name to select its nDSO. */
+						task->fullname = ld_strdup(task->name);
+					}
 				} else {
-					task->fd = open(name, O_RDONLY | O_CLOEXEC);
-					task->fullname = ld_strdup(task->name);
+#endif
+					if (!is_accessible(namespace, task->pathname, g_is_asan, check_inherited)) {
+						LD_LOGW("load absolute_path %{public}s: check ns accessible failed namespace=%{public}s.",
+								task->pathname, namespace ? namespace->ns_name : "NULL");
+						task->fd = -1;
+					} else {
+						task->fd = open(name, O_RDONLY | O_CLOEXEC);
+						task->fullname = ld_strdup(task->name);
+					}
+#ifdef ENABLE_DLOPEN_RELATIVE_PATH
 				}
+#endif
 			}
 		} else {
 			/* Search for the name to see if it's already loaded */

@@ -552,6 +552,9 @@ template("static_and_shared_libs_template") {
         "MUSL_EXTERNAL_FUNCTION",
         "FEATURE_PTHREAD_CANCEL",
       ]
+      if (is_standard_system && musl_target_os == "linux") {
+        defines += [ "ENABLE_DLOPEN_RELATIVE_PATH" ]
+      }
     } else {
       if (target_name == "soft_musl_src_static") {
         defines += [ "PTHREAD_CANCEL_IN_STATIC_LIB" ]

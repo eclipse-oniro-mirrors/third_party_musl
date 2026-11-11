@@ -11,6 +11,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import("../../../musl_config.gni")
+
 functionalext_list = [
   "locale:functionalext_locale_test",
   "time:functionalext_time_test",
@@ -43,3 +45,8 @@ functionalext_list = [
   "adlt:functionalext_adlt_test",
   "prelink:functionalext_prelink_test",
 ]
+
+if (is_standard_system && musl_extended_function) {
+  functionalext_list +=
+      [ "ldso_dlopen_relative_path:ldso_dlopen_relative_path_test" ]
+}

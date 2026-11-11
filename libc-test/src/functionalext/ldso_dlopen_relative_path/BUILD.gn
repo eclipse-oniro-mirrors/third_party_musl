@@ -1,0 +1,58 @@
+# Copyright (c) 2026 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("../../../test_template.gni")
+
+# Only L2 extended builds compile this feature. The OH Linux dynamic loader is
+# not linked into the Cortex-M or riscv32 libc variants.
+relative_path_loader_supported = is_standard_system &&
+                                 musl_extended_function &&
+                                 musl_target_os == "linux" &&
+                                 musl_arch != "cortex_m" &&
+                                 musl_arch != "riscv32"
+
+if (relative_path_loader_supported) {
+  test_sharedlib("relative_path_fixture") {
+  }
+
+  # Concurrent and symbol cases stay in the source tree but are not registered
+  # for now; only the matrix described in TEST_DESIGN.md is built.
+  ohos_executable("dlopen_relative_path_matrix") {
+    testonly = true
+    subsystem_name = "musl"
+    part_name = "libc-test"
+    sources = [ "relative_path_test.c" ]
+    defines = [ "EXPECT_RELATIVE_PATH=1" ]
+    include_dirs = [
+      "//${test_dir}/src/common",
+      "//${musl_include_dir}",
+    ]
+    cflags_c = [
+      "-std=c99",
+      "-Wall",
+      "-Wextra",
+      "-Werror=implicit-function-declaration",
+    ]
+    ldflags = [ "-nostdlib" ]
+    libs = [ "//${out_test_dir}/src/common/libtest.a" ]
+    deps = [ ":relative_path_fixture" ]
+  }
+}
+
+group("ldso_dlopen_relative_path_test") {
+  testonly = true
+  deps = []
+  if (relative_path_loader_supported) {
+    deps = [ ":dlopen_relative_path_matrix" ]
+  }
+}
