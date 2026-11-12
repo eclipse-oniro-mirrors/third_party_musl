@@ -56,11 +56,17 @@ This is a platform-specific extension and is not part of any POSIX standard.
 ```c
 #include <unistd.h>
 #include <stdio.h>
+#include <errno.h>
+#include <string.h>
 
 int main(void)
 {
     uid_t appuid = getappuid();
-    printf("app uid: %u\n", appuid);
+    if (errno == ENOTSUP) {
+        printf("fallback to getuid, returned process user id: %u\n", appuid);
+    } else {
+        printf("app uid: %u\n", appuid);
+    }
     return 0;
 }
 ```

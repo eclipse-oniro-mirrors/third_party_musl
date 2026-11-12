@@ -36,16 +36,35 @@ enum {
 	HM_REMOVE_PERMISSION,
 	HM_GET_PERMISSION,
 	HM_SET_PERMISSION,
-	HM_GET_CLOSEST_HAP_TOKENID,
+	HM_GET_HAP_PTOKENID,
 	HM_GET_FAMILY_TOKENIDS,
-	HM_GET_BINARY_PERMISSIONS,
+	HM_GET_ALL_PERMISSIONS,
 	HM_SET_USERID,
 	HM_GET_USERID,
+	HM_SET_SA_TOKEN_ID,
+	HM_GET_USERINFO,
+	HM_ADD_SPM_ENTRIES,
+	HM_SET_SPM_ENTRIES,
+	HM_GET_SPM_ENTRY,
+	HM_REMOVE_SPM_ENTRY,
+	HM_SET_REFCNT_UID,
+	HM_GET_REFCNT_UID,
+	HM_SET_REFCNT_TOKENID,
+	HM_GET_REFCNT_TOKENID,
+	HM_SPM_CLEAN_REFCNT,
+	HM_SPM_GET_VERSION,
+	HM_SET_HAP_PTOKENID,
+	HM_SET_BIN_DECLARED_PERM,
+	HM_GET_BIN_DECLARED_PERM,
+	HM_GET_ENTERPRISE_SPACE_ID,
+	HM_SET_ENTERPRISE_SPACE_ID,
+	HM_SET_APPUID,
+	HM_GET_APPUID,
 	HM_ACCESS_TOKENID_MAX_NR
 };
 
-#define ACCESS_TOKENID_SET_USERID _IOW(HM_ACCESS_TOKEN_ID_IOCTL_BASE, HM_SET_USERID, uint32_t)
-#define ACCESS_TOKENID_GET_USERID _IOR(HM_ACCESS_TOKEN_ID_IOCTL_BASE, HM_GET_USERID, uint32_t)
+#define ACCESS_TOKENID_SET_APPUID _IOW(HM_ACCESS_TOKEN_ID_IOCTL_BASE, HM_SET_APPUID, uint32_t)
+#define ACCESS_TOKENID_GET_APPUID _IOR(HM_ACCESS_TOKEN_ID_IOCTL_BASE, HM_GET_APPUID, uint32_t)
 
 #define HDAC_DEV "/dev/access_token_id"
 
@@ -56,7 +75,7 @@ uid_t getappuid(void)
     int fd = open(HDAC_DEV, O_RDONLY);
     if (fd >= 0) {
         uid_t userid;
-        int ret = ioctl(fd, ACCESS_TOKENID_GET_USERID, &userid);
+        int ret = ioctl(fd, ACCESS_TOKENID_GET_APPUID, &userid);
         close(fd);
         if (ret == 0) {
             errno = saved_errno;
@@ -90,7 +109,7 @@ static void do_setappuid(void *p)
         c->ret = fd;
         return;
     }
-    long ret = __syscall(SYS_ioctl, fd, ACCESS_TOKENID_SET_USERID, &c->uid);
+    long ret = __syscall(SYS_ioctl, fd, ACCESS_TOKENID_SET_APPUID, &c->uid);
     if (__syscall(SYS_close, fd) && !ret) {
         MUSL_LOGE("setappuid: close fd failed after successful ioctl, uid: %{public}d", c->uid);
     }
