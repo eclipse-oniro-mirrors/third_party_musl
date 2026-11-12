@@ -704,14 +704,6 @@ template("musl_libs") {
       "-fno-stack-protector",
     ]
     cflags_c = []
-    if (musl_arch == "cortex_m") {
-      # CRT objects must not require an unwinder when linking the NDK libc stub.
-      # Override the unwind flags inherited from soft_musl_config.
-      cflags_c += [
-        "-fno-unwind-tables",
-        "-fno-asynchronous-unwind-tables",
-      ]
-    }
     if (musl_arch == "aarch64") {
       cflags_c += [
         "-mbranch-protection=pac-ret+b-key+bti",
