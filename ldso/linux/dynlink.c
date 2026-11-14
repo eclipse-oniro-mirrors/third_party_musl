@@ -5866,6 +5866,11 @@ void *dlopen_impl(
 	bool should_report_hisysevent = false;
 	bool should_sample_report = false;
 	char dlopen_hisysevent_buf[HISYSEVENT_BUF_LEN];
+	/* Track which trace marker is active (loading or linking) so the
+	 * rtld_fail cleanup path, entered via longjmp, can end the marker
+	 * that would otherwise be left unbalanced. */
+	enum { TRACE_NONE = 0, TRACE_LOADING = 1, TRACE_LINKING = 2 };
+	volatile int trace_stage = TRACE_NONE;
 	clock_gettime(CLOCK_MONOTONIC, &total_start);
 #ifdef LOAD_ORDER_RANDOMIZATION
 	struct loadtasks *tasks = NULL;
@@ -5997,6 +6002,10 @@ void *dlopen_impl(
 		tail = orig_tail;
 		tail->next = 0;
 		p = 0;
+		if (trace_stage != TRACE_NONE) {
+			trace_marker_end(HITRACE_TAG_MUSL);
+			trace_stage = TRACE_NONE;
+		}
 		goto end;
 	} else {
 #ifdef LOAD_ORDER_RANDOMIZATION
@@ -6011,6 +6020,7 @@ void *dlopen_impl(
 			goto end;
 		}
 		trace_marker_begin(HITRACE_TAG_MUSL, "loading: entry so", file);
+		trace_stage = TRACE_LOADING;
 		clock_gettime(CLOCK_MONOTONIC, &time_start);
 		if (!load_library_header(task)) {
 			error(noload ?
@@ -6067,6 +6077,7 @@ void *dlopen_impl(
 	tasks = NULL;
 #else
 		trace_marker_begin(HITRACE_TAG_MUSL, "loading: entry so", file);
+		trace_stage = TRACE_LOADING;
 		p = load_library(file, head, ns, true, reserved_address ? &reserved_params : NULL);
 	}
 
@@ -6082,6 +6093,7 @@ void *dlopen_impl(
 	load_deps(p, reserved_address && reserved_address_recursive ? &reserved_params : NULL);
 #endif
 	trace_marker_end(HITRACE_TAG_MUSL); // "loading: entry so" trace end.
+	trace_stage = TRACE_NONE;
 	extend_bfs_deps(p, 0);
 	pthread_mutex_lock(&init_fini_lock);
 	int constructed = p->constructed;
@@ -6106,6 +6118,7 @@ void *dlopen_impl(
 	}
 	struct dso *reloc_head_so = p;
 	trace_marker_begin(HITRACE_TAG_MUSL, "linking: entry so", p->name);
+	trace_stage = TRACE_LINKING;
 	clock_gettime(CLOCK_MONOTONIC, &time_start);
 	if (!p->relocated) {
 		reloc_all(p, extinfo);
@@ -6115,6 +6128,7 @@ void *dlopen_impl(
 	dlopen_cost.reloc_time = (time_end.tv_sec - time_start.tv_sec) * CLOCK_SECOND_TO_MILLI
 		+ (time_end.tv_nsec - time_start.tv_nsec) / CLOCK_NANO_TO_MILLI;
 	trace_marker_end(HITRACE_TAG_MUSL);
+	trace_stage = TRACE_NONE;
 	reloc_head_so->is_reloc_head_so_dep = false;
 	for (size_t i = 0; reloc_head_so->deps[i]; i++) {
 		reloc_head_so->deps[i]->is_reloc_head_so_dep = false;
