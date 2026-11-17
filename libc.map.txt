@@ -2139,6 +2139,7 @@
     dlns_add_plugin_default_ld_dictionary;
     dlns_get_plugin_default_permitted_path;
     dlopen_config_abs_path_policy;
+    dlopen_enable_relative_path;
     HiLogBasePrint;
     HiLogBaseIsLoggable;
     __asprintf_chk;
