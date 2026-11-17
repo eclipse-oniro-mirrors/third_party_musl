@@ -23,11 +23,13 @@ int __getzonename(const char *restrict s, struct tm *restrict tm)
         p++;
     }
 
-    /* In the structure struct tm, tm_zone is declared as const char * type, so use static */
-    static char buf[16] = {0};
-    memset(buf, 0x0, sizeof(buf));
-    int len = p - s;
-    memcpy(buf, s, len);
+    /* Keep the name alive after returning, reserving space for the terminator. */
+    static char buf[16];
+    size_t len = (size_t)(p - s);
+    /* Truncate the stored name, but consume the entire input name. */
+    size_t copy_len = len < sizeof(buf) ? len : sizeof(buf) - 1;
+    memcpy(buf, s, copy_len);
+    buf[copy_len] = '\0';
     tm->__tm_zone = buf;
 
     /* Re-fetch local data, extract tm_isdst flag. */
@@ -36,7 +38,7 @@ int __getzonename(const char *restrict s, struct tm *restrict tm)
     if (tmp) {
         tm->tm_isdst = tmp->tm_isdst;
     }
-    return len;
+    return (int)len;
 }
 
 int __getgmtoff(const char *restrict s, struct tm *restrict tm)
