@@ -8,6 +8,9 @@ https://gitcode.com/openharmony/third_party_musl/blob/master/libc.map.txt
 https://gitcode.com/openharmony/interface_sdk_c/blob/master/third_party/musl/ndk_script/adapter/libc.ndk.json
 
 ## 系统侧libc新的变化
+2026/11/18 <so_dedup/so_dedup.h>
+- 新增`OH_LinkDedupedSo`: 应用安装时为应用去重的 so 创建指向系统预制 so 的软链接
+
 2026/11/11 导出接口（无公共头文件声明）
 新增以下接口专为musl_extended_function为true设计使用：
 - 新增`dlopen_enable_relative_path`: 进程级开启显式相对路径 dlopen；按 CWD 打开后经 `/proc/self/fd` 解析真实路径并做命名空间权限校验；开关不可关闭；仅随 `musl_extended_function=true` 的 L2 Linux 构建编译，未启用扩展功能时不编译、不导出

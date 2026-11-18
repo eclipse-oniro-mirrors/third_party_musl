@@ -136,6 +136,7 @@ if (is_lite_system && current_os == "ohos") {
       ":musl_copy_inc_netpacket",
       ":musl_copy_inc_root",
       ":musl_copy_inc_scsi",
+      ":musl_copy_inc_so_dedup",
       ":musl_copy_inc_sys",
       ":musl_copy_inc_trace",
       ":musl_ns_config",
@@ -166,6 +167,7 @@ if (is_lite_system && current_os == "ohos") {
     src_files += musl_inc_root_files
     src_files += musl_inc_info_files
     src_files += musl_inc_trace_files
+    src_files += musl_inc_so_dedup_files
 
     src_files += [
       "crt/Scrt1.c",
@@ -461,6 +463,17 @@ if (is_lite_system && current_os == "ohos") {
     deps = [ ":create_porting_src" ]
   }
 
+  copy("musl_copy_inc_so_dedup") {
+    sources = []
+    sources_orig = musl_inc_so_dedup_files
+    foreach(s, sources_orig) {
+      sources += [ "${target_out_dir}/${musl_ported_dir}/${s}" ]
+    }
+    outputs =
+        [ "${target_out_dir}/${musl_inc_out_dir}/so_dedup/{{source_file_part}}" ]
+    deps = [ ":create_porting_src" ]
+  }
+
   copy("musl_copy_inc_fortify") {
     sources = []
     sources_orig = musl_inc_fortify_files
@@ -539,4 +552,5 @@ if (is_lite_system && current_os == "ohos") {
       cflags_c += [ "-fno-stack-protector" ]
     }
   }
+
 }

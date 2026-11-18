@@ -1,0 +1,75 @@
+# Copyright (c) 2026 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("../../../test_template.gni")
+import("test_src_functionalext_so_dedup.gni")
+
+# single source of truth for the on-device test sandbox: every path macro is
+# derived from it so the fixtures created by the test and the DEDUP_ROOT
+# overrides compiled into the implementation cannot drift
+so_dedup_test_root = "/data/local/tmp/libc-test/so_dedup"
+
+foreach(s, functionalext_so_dedup_list) {
+  # not the standard test_unittest template: this test compiles the
+  # implementation source together with the sandbox path overrides; the log
+  # assertions exercise the real hilog path, so HiLogAdapterPrint and
+  # musl_log_reset are pulled in from libc.a while the musl.log.* parameters
+  # drive them (see main() of the test source)
+  ohos_executable("${s}") {
+    subsystem_name = "musl"
+    part_name = "libc-test"
+    testonly = true
+
+    sources = [
+      "${s}.c",
+      "//third_party/musl/src/linux/so_dedup.c",
+    ]
+
+    include_dirs = [
+      "../common",
+      "//third_party/musl/libc-test/src/common",
+      "//third_party/musl/libc-test/src/functionalext/common",
+      "//third_party/musl/include/so_dedup",
+      "//third_party/musl/src/internal",
+      "//third_party/musl/src/internal/linux",
+    ]
+
+    defines = [
+      "SO_DEDUP_TEST_ROOT=\"$so_dedup_test_root\"",
+      "DEDUP_ROOT=\"$so_dedup_test_root\"",
+      "_GNU_SOURCE",
+      "OHOS_ENABLE_PARAMETER",
+    ]
+
+    configs = [ "//third_party/musl/libc-test/src/common:config_runtest" ]
+
+    deps = [ "//third_party/musl:create_porting_src" ]
+
+    external_deps = [
+      "bounds_checking_function:libsec_shared",
+      "init:parameterbase",
+    ]
+
+    if (!musl_unit_test_flag) {
+      libs = [ "${musl_lib_dir}/libc.a" ]
+    }
+  }
+}
+
+group("functionalext_so_dedup_test") {
+  testonly = true
+  deps = []
+  foreach(s, functionalext_so_dedup_list) {
+    deps += [ ":${s}" ]
+  }
+}

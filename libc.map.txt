@@ -1337,6 +1337,7 @@
     OH_HashMapIsEmpty;
     OH_HashMapRemove;
     OH_HashMapTraverse;
+    OH_LinkDedupedSo;
     OH_ListAddTail;
     OH_ListAddWithOrder;
     OH_ListFind;
