@@ -27,6 +27,15 @@ int __getgr_a(const char *name, gid_t gid, struct group *gr, char **buf, size_t 
 
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
 	f = fopen("/etc/group", "rbe");
+#ifdef MUSL_EXTERNAL_FUNCTION
+	if (!f) {
+		int saved_errno = errno;
+		f = fopen("/etc/group_factory", "rbe");
+		if (!f) {
+			errno = saved_errno;
+		}
+	}
+#endif
 	if (!f) {
 		rv = errno;
 		goto done;

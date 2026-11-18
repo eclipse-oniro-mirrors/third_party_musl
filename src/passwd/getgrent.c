@@ -34,6 +34,15 @@ struct group *getgrent()
 	struct group *res;
 	size_t size=0, nmem=0;
 	if (!f) f = fopen("/etc/group", "rbe");
+#ifdef MUSL_EXTERNAL_FUNCTION
+	if (!f) {
+		int saved_errno = errno;
+		f = fopen("/etc/group_factory", "rbe");
+		if (!f) {
+			errno = saved_errno;
+		}
+	}
+#endif
 	if (!f) return 0;
 	__getgrent_a(f, &gr, &line, &size, &mem, &nmem, &res);
 	return res;
@@ -68,6 +77,15 @@ int getgrent_r(struct group *gr, char *buf, size_t size, struct group **res)
 
 	if (!f) {
 		f = fopen("/etc/group", "rbe");
+#ifdef MUSL_EXTERNAL_FUNCTION
+		if (!f) {
+			int saved_errno = errno;
+			f = fopen("/etc/group_factory", "rbe");
+			if (!f) {
+				errno = saved_errno;
+			}
+		}
+#endif
 		if (!f) {
 			rv = ENOENT;
 			*res = 0;

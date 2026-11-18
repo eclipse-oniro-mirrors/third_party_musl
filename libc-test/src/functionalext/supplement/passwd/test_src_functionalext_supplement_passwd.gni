@@ -29,3 +29,10 @@ functionalext_supplement_passwd_test = [
   "fgetpwent_r",
   "getgrent_r",
 ]
+
+# factory 回退特性：使能时验证回退行为，未使能时验证行为不变
+if (musl_extended_function) {
+  functionalext_supplement_passwd_test += [ "passwd_factory_fallback" ]
+} else {
+  functionalext_supplement_passwd_test += [ "passwd_factory_unchanged" ]
+}

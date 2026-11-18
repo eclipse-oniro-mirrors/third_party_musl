@@ -28,6 +28,15 @@ int __getpw_a(const char *name, uid_t uid, struct passwd *pw, char **buf, size_t
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
 
 	f = fopen("/etc/passwd", "rbe");
+#ifdef MUSL_EXTERNAL_FUNCTION
+	if (!f) {
+		int saved_errno = errno;
+		f = fopen("/etc/passwd_factory", "rbe");
+		if (!f) {
+			errno = saved_errno;
+		}
+	}
+#endif
 	if (!f) {
 		rv = errno;
 		goto done;

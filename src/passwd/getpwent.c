@@ -21,6 +21,15 @@ struct passwd *getpwent()
 {
 	struct passwd *res;
 	if (!f) f = fopen("/etc/passwd", "rbe");
+#ifdef MUSL_EXTERNAL_FUNCTION
+	if (!f) {
+		int saved_errno = errno;
+		f = fopen("/etc/passwd_factory", "rbe");
+		if (!f) {
+			errno = saved_errno;
+		}
+	}
+#endif
 	if (!f) return 0;
 	__getpwent_a(f, &pw, &line, &size, &res);
 	return res;
@@ -51,6 +60,15 @@ int getpwent_r(struct passwd *pw, char *buf, size_t size, struct passwd **res)
 
 	if (!f) {
 		f = fopen("/etc/passwd", "rbe");
+#ifdef MUSL_EXTERNAL_FUNCTION
+		if (!f) {
+			int saved_errno = errno;
+			f = fopen("/etc/passwd_factory", "rbe");
+			if (!f) {
+				errno = saved_errno;
+			}
+		}
+#endif
 		if (!f) {
 			rv = ENOENT;
 			*res = 0;
