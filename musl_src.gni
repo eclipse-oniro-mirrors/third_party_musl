@@ -545,6 +545,7 @@ musl_src_file = [
   "src/linux/setns.c",
   "src/linux/settimeofday.c",
   "src/linux/signalfd.c",
+  "src/linux/so_dedup.c",
   "src/linux/splice.c",
   "src/linux/statx.c",
   "src/linux/stime.c",
@@ -1964,6 +1965,7 @@ if (musl_arch == "arm") {
     "src/linux/setns.c",
     "src/linux/settimeofday.c",
     "src/linux/signalfd.c",
+    "src/linux/so_dedup.c",
     "src/linux/splice.c",
     "src/linux/statx.c",
     "src/linux/stime.c",
@@ -2901,6 +2903,10 @@ musl_inc_info_files = [
   "include/info/application_target_sdk_version.h",
   "include/info/device_api_version.h",
   "include/info/fatal_message.h",
+]
+
+musl_inc_so_dedup_files = [
+  "include/so_dedup/so_dedup.h",
 ]
 
 musl_inc_fortify_files = [

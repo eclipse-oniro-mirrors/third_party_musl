@@ -44,6 +44,7 @@ functionalext_list = [
   "string:functionalext_string_test",
   "adlt:functionalext_adlt_test",
   "prelink:functionalext_prelink_test",
+  "so_dedup:functionalext_so_dedup_test",
 ]
 
 if (is_standard_system && musl_extended_function) {
