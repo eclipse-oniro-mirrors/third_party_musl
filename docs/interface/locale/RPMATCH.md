@@ -1,4 +1,4 @@
-## RPMATCH &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; OHOS Programmer's Manual
+## RPMATCH        OHOS Programmer's Manual
 
 #### **NAME**
 
@@ -7,6 +7,7 @@
 #### **SYNOPSIS**
 
 ```c
+#define _GNU_SOURCE
 #include <stdlib.h>
 
 int rpmatch(const char *response);
@@ -18,7 +19,7 @@ int rpmatch(const char *response);
 
 ​      It matches response against the locale's YESEXPR and NOEXPR regular expressions obtained from nl_langinfo(). In the "C" locale, YESEXPR is "^[yY]" and NOEXPR is "^[nN]", so any word beginning with 'y' or 'Y' (such as "yes") is affirmative and any word beginning with 'n' or 'N' (such as "no") is negative. Other locales provide their own localized patterns.
 
-​      The function compiles the locale's response patterns on each call. It uses no shared mutable state, so it is safe to call concurrently from multiple threads. Passing NULL for response results in undefined behavior.
+​      The function compiles the locale's response patterns on each call. Apart from reading the process-global locale through nl_langinfo(), it uses no shared mutable state, so it is safe to call concurrently from multiple threads as long as no other thread calls setlocale() at the same time. Passing NULL for response results in undefined behavior.
 
 #### **RETURN VALUE**
 
@@ -30,18 +31,18 @@ int rpmatch(const char *response);
 
 ​      -1　if response does not match either pattern, or if the locale's YESEXPR or NOEXPR patterns could not be compiled (the answer cannot be determined).
 
-​      This function does not set errno.
+​      This function does not use errno to report errors. The internal regular-expression engine may still modify errno (for example, to ENOMEM on allocation failure), so callers must not rely on errno being unchanged.
 
 #### **ERRORS**
 
-​      rpmatch() can fail for any of the reasons that regcomp() or regexec() can fail; the error is not available from errno or anywhere else, but indicates a failure of the regex engine. This case is indistinguishable from that of an unrecognized value of response, since both return -1.
+​      No errors are defined.
 
 #### ATTRIBUTES
 
 | Interface | Attribute     | Value          |
 | --------- | ------------- | -------------- |
-| rpmatch()  | Thread safety | MT-Safe |
-|            | Async-signal-safety | Not Safe |
+| rpmatch()  | Thread safety | MT-Safe locale |
+|            | Signal safety | Not Safe |
 
 #### HISTORY
 
@@ -50,6 +51,8 @@ int rpmatch(const char *response);
 #### NOTES
 
 ​      This function is declared when `_GNU_SOURCE` or `_BSD_SOURCE` is defined.
+
+​      The function can fail for any of the reasons that regcomp() or regexec() can fail; the error is not available from errno or anywhere else, but indicates a failure of the regex engine. This case is indistinguishable from that of an unrecognized value of response, since both return -1. Note that errno may nevertheless have been modified by the internal regex engine.
 
 #### CONFORMING TO
 

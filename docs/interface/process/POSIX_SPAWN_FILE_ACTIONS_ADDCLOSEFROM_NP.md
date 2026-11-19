@@ -1,4 +1,4 @@
-## POSIX_SPAWN_FILE_ACTIONS_ADDCLOSEFROM_NP &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; OHOS Programmer's Manual
+## POSIX_SPAWN_FILE_ACTIONS_ADDCLOSEFROM_NP OHOS Programmer's Manual
 
 #### **NAME**
 
@@ -7,6 +7,7 @@
 #### **SYNOPSIS**
 
 ```c
+#define _GNU_SOURCE
 #include <spawn.h>
 
 int posix_spawn_file_actions_addclosefrom_np(posix_spawn_file_actions_t *file_actions, int from);
@@ -43,7 +44,7 @@ int posix_spawn_file_actions_addclosefrom_np(posix_spawn_file_actions_t *file_ac
 | Interface | Attribute     | Value          |
 | --------- | ------------- | -------------- |
 | posix_spawn_file_actions_addclosefrom_np() | Thread safety | MT-Safe |
-|             | Async-signal-safety | Not Safe |
+|             | Signal safety | Not Safe |
 
 #### HISTORY
 
@@ -52,6 +53,8 @@ int posix_spawn_file_actions_addclosefrom_np(posix_spawn_file_actions_t *file_ac
 #### NOTES
 
 ​      This function is declared when `_BSD_SOURCE` or `_GNU_SOURCE` is defined (same as posix_spawn_file_actions_addchdir_np / addfchdir_np).
+
+​      This interface is not supported on LiteOS-A. The implementation contains `UNSUPPORTED_API_VOID(LITEOS_A)`, which logs an `[ERR]Unsupported API` message at runtime on LiteOS-A builds; do not rely on its behavior there.
 
 #### CONFORMING TO
 

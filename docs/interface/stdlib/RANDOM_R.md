@@ -1,8 +1,3 @@
-<!--
-Copyright (c) 2026 Huawei Device Co., Ltd.
-SPDX-License-Identifier: MIT
--->
-
 ## RANDOM_R        OHOS Programmer's Manual
 
 #### **NAME**
@@ -12,6 +7,7 @@ random_r - generate a pseudo-random number using caller-owned state.
 #### **SYNOPSIS**
 
 ```c
+#define _GNU_SOURCE
 #include <stdlib.h>
 
 int random_r(struct random_data *restrict buf, int32_t *restrict result);
@@ -46,13 +42,11 @@ Separate contexts and buffers may be used concurrently. Callers must synchronize
 
 #### HISTORY
 
-2026
+​      -- 2026
 
 #### NOTES
 
 To make the declaration visible from `<stdlib.h>`, define `_GNU_SOURCE`, `_BSD_SOURCE`, or `_DEFAULT_SOURCE` before the first header include.
-
-The interface is available on all supported device types and does not require `MUSL_EXTERNAL_FUNCTION`.
 
 Generation and seeding use musl's algorithms. For the same seed and capacity tier, output matches musl's global initstate()/random() sequence, except that seed 0 is treated as 1. The additive generators do not reproduce glibc's sequences.
 
@@ -68,6 +62,7 @@ random_r() is a GNU extension and is not specified by ISO C or POSIX.
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 int main(void)
 {

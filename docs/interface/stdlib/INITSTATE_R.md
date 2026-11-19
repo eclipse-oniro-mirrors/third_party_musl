@@ -7,6 +7,7 @@ initstate_r - initialize a pseudo-random generator in caller-owned memory.
 #### **SYNOPSIS**
 
 ```c
+#define _GNU_SOURCE
 #include <stdlib.h>
 
 int initstate_r(unsigned seed, char *restrict state, size_t size,
@@ -52,13 +53,11 @@ Independent contexts with independent buffers may be initialized concurrently. C
 
 #### HISTORY
 
-2026
+​      -- 2026
 
 #### NOTES
 
 To make the declaration visible from `<stdlib.h>`, define `_GNU_SOURCE`, `_BSD_SOURCE`, or `_DEFAULT_SOURCE` before the first header include.
-
-The interface is available on all supported device types and does not require `MUSL_EXTERNAL_FUNCTION`.
 
 Generation and seeding use musl's algorithms, with seed 0 normalized to 1. For the same capacity tier, the sequence matches musl's global initstate()/random() sequence when the global seed is `(seed != 0) ? seed : 1`. Additive sequences do not reproduce glibc's sequences.
 
@@ -74,6 +73,7 @@ initstate_r() is a GNU extension and is not specified by ISO C or POSIX.
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 int main(void)
 {
