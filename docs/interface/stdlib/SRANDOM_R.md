@@ -7,6 +7,7 @@ srandom_r - restart an initialized pseudo-random generator with a seed.
 #### **SYNOPSIS**
 
 ```c
+#define _GNU_SOURCE
 #include <stdlib.h>
 
 int srandom_r(unsigned seed, struct random_data *buf);
@@ -41,13 +42,11 @@ Separate contexts and buffers may be reseeded concurrently. Callers must synchro
 
 #### HISTORY
 
-2026
+​      -- 2026
 
 #### NOTES
 
 To make the declaration visible from `<stdlib.h>`, define `_GNU_SOURCE`, `_BSD_SOURCE`, or `_DEFAULT_SOURCE` before the first header include.
-
-The interface is available on all supported device types and does not require `MUSL_EXTERNAL_FUNCTION`.
 
 Seeding uses musl's algorithm with the glibc convention that seed 0 means 1. For a matching capacity tier, compare against musl's global srandom() using `(seed != 0) ? seed : 1`. Reproducing glibc's additive output sequence is not part of this interface's contract.
 
@@ -63,6 +62,7 @@ srandom_r() is a GNU extension and is not specified by ISO C or POSIX.
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 int main(void)
 {

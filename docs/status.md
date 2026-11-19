@@ -19,6 +19,13 @@ https://gitcode.com/openharmony/interface_sdk_c/blob/master/third_party/musl/ndk
 - 新增`initstate_r`: 使用指定种子和调用者提供的状态缓冲区初始化可重入伪随机数生成器
 - 新增`random_r`: 使用调用者提供的生成器状态生成伪随机数，并通过输出参数返回结果
 - 新增`srandom_r`: 为已初始化的可重入伪随机数生成器重新设置种子，重启随机数序列
+- 新增`rpmatch`: 根据当前 locale 判定 yes/no 应答的肯定或否定
+
+2026/11/6 <spawn.h>
+- 新增`posix_spawn_file_actions_addclosefrom_np`: 向 spawn file actions 对象添加批量关闭文件描述符操作
+
+2026/11/6 <time.h>
+- 新增`strptime_l`: 使用指定 locale 将字符串解析为 tm 结构
 
 2026/11/3 <unistd.h>
 新增以下接口专为musl_extended_function为true设计使用：
