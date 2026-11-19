@@ -13,7 +13,9 @@
  * limitations under the License.
  */
 
-package ohos.musl;
+package ohos.musl.math;
+
+import ohos.musl.Assert;
 
 /**
  * {@link MathFuncs}（math.h：sqrt/pow/floor/fabs）的测试套件。

@@ -95,28 +95,32 @@ C → Java 接口转换的探索与演示。
 
 ## 目录结构
 
+目录组织仿 musl `src/` 按类型分子目录：主代码在 `src/ohos/musl/<type>/`，测试代码
+独立放在 `test/ohos/musl/<type>/`，包名对应为 `ohos.musl.<type>`。
+
 ```
 java_api/
 ├── README.md
-└── src/ohos/musl/
-    ├── StringFuncs.java     # string.h / strings.h：13 个字符串函数
-    ├── CtypeFuncs.java      # ctype.h：10 个字符分类/转换函数
-    ├── StdlibFuncs.java     # stdlib.h：abs / labs / atoi
-    ├── MathFuncs.java       # math.h：sqrt / pow / floor / fabs
-    ├── MuslDemo.java        # 演示入口
-    ├── Assert.java          # 无依赖断言工具
-    ├── StringFuncsTest.java # 测试
-    ├── CtypeFuncsTest.java  # 测试
-    ├── StdlibFuncsTest.java # 测试
-    ├── MathFuncsTest.java   # 测试
-    └── TestRunner.java      # 测试套件入口
+├── src/ohos/musl/                  # 主代码（按类型子目录，仿 musl src/）
+│   ├── string/StringFuncs.java     # ohos.musl.string  string.h / strings.h（13 个）
+│   ├── ctype/CtypeFuncs.java       # ohos.musl.ctype   ctype.h（10 个）
+│   ├── stdlib/StdlibFuncs.java     # ohos.musl.stdlib  stdlib.h（3 个）
+│   ├── math/MathFuncs.java         # ohos.musl.math    math.h（4 个）
+│   └── MuslDemo.java               # ohos.musl         演示入口
+└── test/ohos/musl/                 # 测试（单独目录，按类型子目录）
+    ├── Assert.java                 # ohos.musl         无依赖断言工具
+    ├── TestRunner.java             # ohos.musl         测试套件入口
+    ├── string/StringFuncsTest.java # ohos.musl.string
+    ├── ctype/CtypeFuncsTest.java   # ohos.musl.ctype
+    ├── stdlib/StdlibFuncsTest.java # ohos.musl.stdlib
+    └── math/MathFuncsTest.java     # ohos.musl.math
 ```
 
 ## 编译与运行（独立于现有构建）
 
 ```sh
 cd java_api
-javac -d out src/ohos/musl/*.java
+javac -d out $(find src test -name '*.java')
 java -cp out ohos.musl.MuslDemo   # 演示
 java -cp out ohos.musl.TestRunner # 测试（全部通过时退出码为 0）
 ```
@@ -145,4 +149,4 @@ ALL TESTS PASSED
 
 1. 在 `java_api/` 下补充 `BUILD.gn`，声明 Java 源集（`java_sources` / `java_library`）；
 2. 或迁移到 OpenHarmony 的 ArkTS / NAPI 工程结构；
-3. 接入前需与团队确认包名（`ohos.musl`）、目标语言（Java / ArkTS）与 ABI 约定。
+3. 接入前需与团队确认包名（`ohos.musl.string` / `ohos.musl.ctype` / `ohos.musl.stdlib` / `ohos.musl.math`）、目标语言（Java / ArkTS）与 ABI 约定。

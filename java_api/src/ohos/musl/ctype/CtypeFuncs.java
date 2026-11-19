@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package ohos.musl;
+package ohos.musl.ctype;
 
 /**
  * Java 版本的 ctype.h 纯函数接口。

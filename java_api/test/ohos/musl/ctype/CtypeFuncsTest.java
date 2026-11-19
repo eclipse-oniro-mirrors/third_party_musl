@@ -13,7 +13,9 @@
  * limitations under the License.
  */
 
-package ohos.musl;
+package ohos.musl.ctype;
+
+import ohos.musl.Assert;
 
 /**
  * {@link CtypeFuncs} 的测试套件。期望值对照 musl 默认（非 ICU）路径的 ctype 宏/函数。

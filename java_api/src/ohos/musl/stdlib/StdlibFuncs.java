@@ -13,7 +13,9 @@
  * limitations under the License.
  */
 
-package ohos.musl;
+package ohos.musl.stdlib;
+
+import ohos.musl.ctype.CtypeFuncs;
 
 /**
  * Java 版本的 {@code <stdlib.h>} 纯函数接口。

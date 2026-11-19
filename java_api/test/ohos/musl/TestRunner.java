@@ -15,6 +15,11 @@
 
 package ohos.musl;
 
+import ohos.musl.ctype.CtypeFuncsTest;
+import ohos.musl.math.MathFuncsTest;
+import ohos.musl.stdlib.StdlibFuncsTest;
+import ohos.musl.string.StringFuncsTest;
+
 /**
  * 测试套件入口：依次运行各测试类并汇总结果，失败时以非零码退出。
  *

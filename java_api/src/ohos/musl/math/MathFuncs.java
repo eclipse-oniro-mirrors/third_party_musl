@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package ohos.musl;
+package ohos.musl.math;
 
 /**
  * Java 版本的 {@code <math.h>} 纯函数接口。

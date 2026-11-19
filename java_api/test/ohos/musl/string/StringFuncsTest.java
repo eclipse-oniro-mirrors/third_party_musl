@@ -13,7 +13,9 @@
  * limitations under the License.
  */
 
-package ohos.musl;
+package ohos.musl.string;
+
+import ohos.musl.Assert;
 
 /**
  * {@link StringFuncs} 的测试套件。期望值对照 musl {@code src/string/*.c} 语义推演。

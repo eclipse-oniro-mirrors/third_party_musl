@@ -13,7 +13,9 @@
  * limitations under the License.
  */
 
-package ohos.musl;
+package ohos.musl.stdlib;
+
+import ohos.musl.Assert;
 
 /**
  * {@link StdlibFuncs}（stdlib.h：abs/labs/atoi）的测试套件。
