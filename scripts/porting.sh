@@ -49,6 +49,7 @@ cp -rfp ${SRC_DIR}/src/gwp_asan/linux/* ${DST_DIR}/src/gwp_asan
 cp -rfp ${SRC_DIR}/src/hilog/linux/* ${DST_DIR}/src/hilog
 cp -rfp ${SRC_DIR}/src/linux/linux/* ${DST_DIR}/src/linux
 cp -rfp ${SRC_DIR}/src/network/linux/* ${DST_DIR}/src/network
+cp -rfp ${SRC_DIR}/src/so_dedup/linux/* ${DST_DIR}/src/so_dedup
 cp -rfp ${SRC_DIR}/src/syscall_hooks/linux/* ${DST_DIR}/src/syscall_hooks
 cp -rfp ${SRC_DIR}/src/signal/linux/* ${DST_DIR}/src/signal
 cp -rfp ${SRC_DIR}/src/thread/linux/* ${DST_DIR}/src/thread

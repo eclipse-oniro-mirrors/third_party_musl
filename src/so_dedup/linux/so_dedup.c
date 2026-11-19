@@ -26,7 +26,7 @@
 #include <sys/xattr.h>
 #include <unistd.h>
 
-#include "../../include/so_dedup/so_dedup.h"
+#include "../../../include/so_dedup/so_dedup.h"
 #include "musl_log.h"
 
 #ifndef DEDUP_ROOT

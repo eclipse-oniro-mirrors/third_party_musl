@@ -17,7 +17,7 @@
  * so_dedup functionalext tests for the OH_LinkDedupedSo(library_path,
  * original_sha256) interface exported from libc.so.
  *
- * The test compiles src/linux/so_dedup.c together with this file (see
+ * The test compiles src/so_dedup/linux/so_dedup.c together with this file (see
  * BUILD.gn) so the DEDUP_ROOT sandbox overrides apply to
  * the implementation itself; every fixture path below derives from
  * SO_DEDUP_TEST_ROOT, the single source of truth shared by both.

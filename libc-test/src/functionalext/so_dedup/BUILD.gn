@@ -32,7 +32,7 @@ foreach(s, functionalext_so_dedup_list) {
 
     sources = [
       "${s}.c",
-      "//third_party/musl/src/linux/so_dedup.c",
+      "//third_party/musl/src/so_dedup/linux/so_dedup.c",
     ]
 
     include_dirs = [
