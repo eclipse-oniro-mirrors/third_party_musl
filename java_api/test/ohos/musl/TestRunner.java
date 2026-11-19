@@ -17,6 +17,7 @@ package ohos.musl;
 
 import ohos.musl.ctype.CtypeFuncsTest;
 import ohos.musl.math.MathFuncsTest;
+import ohos.musl.misc.MiscFuncsTest;
 import ohos.musl.stdlib.StdlibFuncsTest;
 import ohos.musl.string.StringFuncsTest;
 
@@ -24,7 +25,8 @@ import ohos.musl.string.StringFuncsTest;
  * 测试套件入口：依次运行各测试类并汇总结果，失败时以非零码退出。
  *
  * <pre>
- *   javac -d out src/ohos/musl/*.java
+ *   cd java_api
+ *   javac -d out $(find src test -name '*.java')
  *   java -cp out ohos.musl.TestRunner
  * </pre>
  */
@@ -37,6 +39,7 @@ public final class TestRunner {
         int total = 0;
         total += StringFuncsTest.run();
         total += CtypeFuncsTest.run();
+        total += MiscFuncsTest.run();
         total += StdlibFuncsTest.run();
         total += MathFuncsTest.run();
 

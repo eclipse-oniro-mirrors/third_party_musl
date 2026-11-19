@@ -27,9 +27,9 @@ C → Java 接口转换的探索与演示。
 
 因此规避了 `malloc`/`free`、`open`/`read`/`write`、`printf`、`errno` 等不适合直接映射的接口。
 
-## 接口清单与映射（共 30 个）
+## 接口清单与映射（共 60 个）
 
-### StringFuncs —— `<string.h>` / `<strings.h>`（13 个）
+### StringFuncs —— `<string.h>` / `<strings.h>`（18 个）
 
 | C 接口 | 头文件 | Java 方法 | 返回类型映射 |
 |---|---|---|---|
@@ -40,14 +40,19 @@ C → Java 接口转换的探索与演示。
 | `int strcasecmp(const char *, const char *)` | strings.h | `strcasecmp(String, String)` | `int` |
 | `int strncasecmp(const char *, const char *, size_t)` | strings.h | `strncasecmp(String, String, int)` | `int` |
 | `int memcmp(const void *, const void *, size_t)` | string.h | `memcmp(byte[], byte[], int)` | `void*` → `byte[]` |
+| `void *memchr(const void *, int, size_t)` | string.h | `memchr(byte[], int, int)` | 指针 → 下标，`NULL` → `-1` |
+| `void *memcpy(void *, const void *, size_t)` | string.h | `memcpy(byte[], byte[], int)` | `void*` 返回值省略 → `void` |
+| `void *memmove(void *, const void *, size_t)` | string.h | `memmove(byte[], byte[], int)` | `void*` 返回值省略 → `void` |
+| `void *memset(void *, int, size_t)` | string.h | `memset(byte[], int, int)` | `void*` 返回值省略 → `void` |
 | `char *strchr(const char *, int)` | string.h | `strchr(String, int)` | 指针 → 下标，`NULL` → `-1` |
 | `char *strrchr(const char *, int)` | string.h | `strrchr(String, int)` | 指针 → 下标，`NULL` → `-1` |
 | `char *strstr(const char *, const char *)` | string.h | `strstr(String, String)` | 指针 → 下标，`NULL` → `-1` |
 | `char *strpbrk(const char *, const char *)` | string.h | `strpbrk(String, String)` | 指针 → 下标，`NULL` → `-1` |
+| `char *strchrnul(const char *, int)` | string.h | `strchrnul(String, int)` | 指针 → 下标，结尾 NUL → `len` |
 | `size_t strspn(const char *, const char *)` | string.h | `strspn(String, String)` | `size_t` → `int` |
 | `size_t strcspn(const char *, const char *)` | string.h | `strcspn(String, String)` | `size_t` → `int` |
 
-### CtypeFuncs —— `<ctype.h>`（10 个）
+### CtypeFuncs —— `<ctype.h>`（16 个）
 
 | C 接口 | Java 方法 | 返回类型映射 |
 |---|---|---|
@@ -59,25 +64,55 @@ C → Java 接口转换的探索与演示。
 | `int islower(int)` | `islower(int)` | 0/非0 → `boolean` |
 | `int isspace(int)` | `isspace(int)` | 0/非0 → `boolean` |
 | `int isblank(int)` | `isblank(int)` | 0/非0 → `boolean` |
+| `int isgraph(int)` | `isgraph(int)` | 0/非0 → `boolean` |
+| `int isprint(int)` | `isprint(int)` | 0/非0 → `boolean` |
+| `int ispunct(int)` | `ispunct(int)` | 0/非0 → `boolean` |
+| `int iscntrl(int)` | `iscntrl(int)` | 0/非0 → `boolean` |
+| `int isascii(int)` | `isascii(int)` | 0/非0 → `boolean` |
 | `int tolower(int)` | `tolower(int)` | `int` |
 | `int toupper(int)` | `toupper(int)` | `int` |
+| `int toascii(int)` | `toascii(int)` | `int`（低 7 位掩码） |
 
-### StdlibFuncs —— `<stdlib.h>`（3 个）
+### MiscFuncs —— `<strings.h>`（1 个）
+
+| C 接口 | Java 方法 | 返回类型映射 |
+|---|---|---|
+| `int ffs(int)` | `ffs(int)` | `int`（1..32，0 表示无置位位） |
+
+### StdlibFuncs —— `<stdlib.h>`（7 个）
 
 | C 接口 | Java 方法 | 返回类型映射 |
 |---|---|---|
 | `int abs(int)` | `abs(int)` | `int` |
 | `long labs(long)` | `labs(long)` | `long` |
+| `long long llabs(long long)` | `llabs(long)` | `long long` → `long`（均 64 位） |
 | `int atoi(const char *)` | `atoi(String)` | `int` |
+| `long atol(const char *)` | `atol(String)` | `long` |
+| `long long atoll(const char *)` | `atoll(String)` | `long long` → `long`（复用 `atol`） |
+| `double atof(const char *)` | `atof(String)` | `double`（strtod 子集） |
 
-### MathFuncs —— `<math.h>`（4 个）
+### MathFuncs —— `<math.h>`（18 个）
 
 | C 接口 | Java 方法 | 返回类型映射 |
 |---|---|---|
 | `double sqrt(double)` | `sqrt(double)` | `double` |
 | `double pow(double, double)` | `pow(double, double)` | `double` |
 | `double floor(double)` | `floor(double)` | `double` |
+| `double ceil(double)` | `ceil(double)` | `double` |
 | `double fabs(double)` | `fabs(double)` | `double` |
+| `double sin(double)` | `sin(double)` | `double` |
+| `double cos(double)` | `cos(double)` | `double` |
+| `double tan(double)` | `tan(double)` | `double` |
+| `double asin(double)` | `asin(double)` | `double` |
+| `double acos(double)` | `acos(double)` | `double` |
+| `double atan(double)` | `atan(double)` | `double` |
+| `double atan2(double, double)` | `atan2(double, double)` | `double` |
+| `double exp(double)` | `exp(double)` | `double` |
+| `double log(double)` | `log(double)` | `double` |
+| `double log10(double)` | `log10(double)` | `double` |
+| `double sinh(double)` | `sinh(double)` | `double` |
+| `double cbrt(double)` | `cbrt(double)` | `double` |
+| `double hypot(double, double)` | `hypot(double, double)` | `double` |
 
 ## 关键语义差异
 
@@ -92,6 +127,9 @@ C → Java 接口转换的探索与演示。
 | 大小写折叠 | `strcasecmp`/`strncasecmp` 仅 ASCII（非 ICU） | 仅 ASCII |
 | `abs(INT_MIN)` | 未定义行为 | 溢出回绕，仍为 `Integer.MIN_VALUE` |
 | `atoi` 溢出 | 未定义行为 | 随 int 溢出回绕，与 musl「按负数累加」一致 |
+| `atof` 解析 | 完整 `strtod`（含 C99 十六进制浮点 `0x.8p1`） | 仅 strtod 子集：十进制整数/小数/科学计数法 + `inf`/`infinity`/`nan`，不支持十六进制浮点 |
+| `memcpy/memmove/memset` 返回值 | 返回目标指针（便于链式调用） | 省略 `void*` 返回值，方法返回 `void` |
+| `ffs(i)` 语义 | 最低置位位编号（1..N），`i==0` → 0 | `Integer.numberOfTrailingZeros(i)+1`，`i==0` → 0 |
 
 ## 目录结构
 
@@ -102,16 +140,18 @@ C → Java 接口转换的探索与演示。
 java_api/
 ├── README.md
 ├── src/ohos/musl/                  # 主代码（按类型子目录，仿 musl src/）
-│   ├── string/StringFuncs.java     # ohos.musl.string  string.h / strings.h（13 个）
-│   ├── ctype/CtypeFuncs.java       # ohos.musl.ctype   ctype.h（10 个）
-│   ├── stdlib/StdlibFuncs.java     # ohos.musl.stdlib  stdlib.h（3 个）
-│   ├── math/MathFuncs.java         # ohos.musl.math    math.h（4 个）
+│   ├── string/StringFuncs.java     # ohos.musl.string  string.h / strings.h（18 个）
+│   ├── ctype/CtypeFuncs.java       # ohos.musl.ctype   ctype.h（16 个）
+│   ├── misc/MiscFuncs.java         # ohos.musl.misc    strings.h：ffs（1 个，对齐 musl src/misc/）
+│   ├── stdlib/StdlibFuncs.java     # ohos.musl.stdlib  stdlib.h（7 个）
+│   ├── math/MathFuncs.java         # ohos.musl.math    math.h（18 个）
 │   └── MuslDemo.java               # ohos.musl         演示入口
 └── test/ohos/musl/                 # 测试（单独目录，按类型子目录）
     ├── Assert.java                 # ohos.musl         无依赖断言工具
     ├── TestRunner.java             # ohos.musl         测试套件入口
     ├── string/StringFuncsTest.java # ohos.musl.string
     ├── ctype/CtypeFuncsTest.java   # ohos.musl.ctype
+    ├── misc/MiscFuncsTest.java     # ohos.musl.misc
     ├── stdlib/StdlibFuncsTest.java # ohos.musl.stdlib
     └── math/MathFuncsTest.java     # ohos.musl.math
 ```
@@ -134,6 +174,8 @@ java -cp out ohos.musl.TestRunner # 测试（全部通过时退出码为 0）
 == StringFuncsTest ==
   PASS
 == CtypeFuncsTest ==
+  PASS
+== MiscFuncsTest ==
   PASS
 == StdlibFuncsTest ==
   PASS

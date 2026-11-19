@@ -294,4 +294,81 @@ public final class StringFuncs {
         }
         return i;
     }
+
+    /**
+     * {@code char *strchrnul(const char *s, int c)}：同 {@link #strchr(String, int)}，
+     * 但未找到时返回结尾 NUL 位置（即 {@code s.length()}），对应 C 中返回指向 NUL 的指针。
+     *
+     * @param s 输入字符串
+     * @param c 待查找字符（仅低 8 位有效）
+     * @return 首次出现的下标，未找到返回 {@code s.length()}
+     */
+    public static int strchrnul(String s, int c) {
+        int i = s.indexOf(c & 0xFF);
+        return i >= 0 ? i : s.length();
+    }
+
+    // ------------------------------------------------------------------
+    // 内存操作：memchr / memcpy / memmove / memset
+    // ------------------------------------------------------------------
+
+    /**
+     * {@code void *memchr(const void *src, int c, size_t n)}：在字节数组前 {@code n}
+     * 字节中查找 {@code (unsigned char)c}，返回首次出现的下标；未找到（NULL）返回 -1。
+     *
+     * <p>C 的 {@code void *} 映射为 {@code byte[]}，偏移由调用方通过传入子数组表达。</p>
+     *
+     * @param src 源字节数组
+     * @param c 待查找字节（仅低 8 位有效）
+     * @param n 查找的字节数（需不超过数组长度）
+     * @return 首次出现的下标，未找到返回 -1
+     */
+    public static int memchr(byte[] src, int c, int n) {
+        int target = c & 0xFF;
+        for (int i = 0; i < n; i++) {
+            if ((src[i] & 0xFF) == target) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * {@code void *memcpy(void *dst, const void *src, size_t n)}：将 {@code src} 前
+     * {@code n} 字节复制到 {@code dst}（C 中要求区间不重叠，见 {@code restrict}）。
+     *
+     * <p>C 返回值（目标指针）在 Java 中省略为 {@code void}。</p>
+     *
+     * @param dst 目标字节数组
+     * @param src 源字节数组
+     * @param n 复制的字节数
+     */
+    public static void memcpy(byte[] dst, byte[] src, int n) {
+        System.arraycopy(src, 0, dst, 0, n);
+    }
+
+    /**
+     * {@code void *memmove(void *dst, const void *src, size_t n)}：同
+     * {@link #memcpy(byte[], byte[], int)}，但允许区间重叠（Java 的
+     * {@code System.arraycopy} 本身即为重叠安全）。
+     *
+     * @param dst 目标字节数组
+     * @param src 源字节数组
+     * @param n 复制的字节数
+     */
+    public static void memmove(byte[] dst, byte[] src, int n) {
+        System.arraycopy(src, 0, dst, 0, n);
+    }
+
+    /**
+     * {@code void *memset(void *dst, int c, size_t n)}：将 {@code dst} 前 {@code n}
+     * 字节填充为 {@code (unsigned char)c}。
+     *
+     * @param dst 目标字节数组
+     * @param c 填充值（仅低 8 位有效）
+     * @param n 填充的字节数
+     */
+    public static void memset(byte[] dst, int c, int n) {
+        java.util.Arrays.fill(dst, 0, n, (byte) c);
+    }
 }

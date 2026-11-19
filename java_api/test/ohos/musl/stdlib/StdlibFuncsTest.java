@@ -70,12 +70,55 @@ public final class StdlibFuncsTest {
         Assert.assertEquals(123, StdlibFuncs.atoi("\t\n 123"), "atoi mixed whitespace");
     }
 
+    private static void testAtol() {
+        Assert.assertEquals(0L, StdlibFuncs.atol("0"), "atol(\"0\")");
+        Assert.assertEquals(42L, StdlibFuncs.atol("42"), "atol(\"42\")");
+        Assert.assertEquals(-42L, StdlibFuncs.atol("-42"), "atol(\"-42\")");
+        Assert.assertEquals(1234567890123L, StdlibFuncs.atol("1234567890123"), "atol long");
+        Assert.assertEquals(Long.MAX_VALUE, StdlibFuncs.atol("9223372036854775807"), "atol LONG_MAX");
+        Assert.assertEquals(Long.MIN_VALUE, StdlibFuncs.atol("-9223372036854775808"), "atol LONG_MIN");
+        Assert.assertEquals(0L, StdlibFuncs.atol("abc"), "atol no digits");
+    }
+
+    private static void testAtoll() {
+        Assert.assertEquals(42L, StdlibFuncs.atoll("42"), "atoll(\"42\")");
+        Assert.assertEquals(-42L, StdlibFuncs.atoll("  -42xyz"), "atoll sign and junk");
+    }
+
+    private static void testLlabs() {
+        Assert.assertEquals(0L, StdlibFuncs.llabs(0L), "llabs(0)");
+        Assert.assertEquals(42L, StdlibFuncs.llabs(-42L), "llabs(-42)");
+        Assert.assertEquals(Long.MAX_VALUE, StdlibFuncs.llabs(Long.MAX_VALUE), "llabs(MAX)");
+        Assert.assertEquals(Long.MIN_VALUE, StdlibFuncs.llabs(Long.MIN_VALUE), "llabs(MIN)");
+    }
+
+    private static void testAtof() {
+        Assert.assertEquals(0.0, StdlibFuncs.atof("0"), 1e-12, "atof(\"0\")");
+        Assert.assertEquals(3.14, StdlibFuncs.atof("3.14"), 1e-12, "atof(\"3.14\")");
+        Assert.assertEquals(3.14, StdlibFuncs.atof("  3.14"), 1e-12, "atof space");
+        Assert.assertEquals(3.14, StdlibFuncs.atof("3.14abc"), 1e-12, "atof junk");
+        Assert.assertEquals(-250.0, StdlibFuncs.atof("-2.5e2"), 1e-12, "atof exp");
+        Assert.assertEquals(0.5, StdlibFuncs.atof(".5"), 1e-12, "atof .5");
+        Assert.assertEquals(1.0, StdlibFuncs.atof("1."), 1e-12, "atof 1.");
+        Assert.assertEquals(1.0, StdlibFuncs.atof("1e"), 1e-12, "atof trailing e");
+        Assert.assertEquals(0.0, StdlibFuncs.atof(""), 1e-12, "atof empty");
+        Assert.assertEquals(0.0, StdlibFuncs.atof("abc"), 1e-12, "atof no digits");
+        Assert.assertEquals(Double.POSITIVE_INFINITY, StdlibFuncs.atof("inf"), 1e-12, "atof inf");
+        Assert.assertEquals(Double.NEGATIVE_INFINITY, StdlibFuncs.atof("-infinity"), 1e-12, "atof -infinity");
+        Assert.assertIsNaN(StdlibFuncs.atof("nan"), "atof nan");
+        Assert.assertIsNaN(StdlibFuncs.atof("NaN"), "atof NaN");
+    }
+
     public static int run() {
         failures = 0;
         System.out.println("== StdlibFuncsTest ==");
         check(StdlibFuncsTest::testAbs);
         check(StdlibFuncsTest::testLabs);
         check(StdlibFuncsTest::testAtoi);
+        check(StdlibFuncsTest::testAtol);
+        check(StdlibFuncsTest::testAtoll);
+        check(StdlibFuncsTest::testLlabs);
+        check(StdlibFuncsTest::testAtof);
         System.out.println("  " + (failures == 0 ? "PASS" : failures + " FAILURE(S)"));
         return failures;
     }

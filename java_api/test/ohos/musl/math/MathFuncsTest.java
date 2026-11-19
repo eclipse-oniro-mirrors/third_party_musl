@@ -77,6 +77,38 @@ public final class MathFuncsTest {
                 "fabs(-inf) -> +inf");
     }
 
+    private static void testTrig() {
+        Assert.assertEquals(0.0, MathFuncs.sin(0.0), EPS, "sin(0)");
+        Assert.assertEquals(1.0, MathFuncs.sin(Math.PI / 2), EPS, "sin(pi/2)");
+        Assert.assertEquals(1.0, MathFuncs.cos(0.0), EPS, "cos(0)");
+        Assert.assertEquals(0.0, MathFuncs.tan(0.0), EPS, "tan(0)");
+        Assert.assertEquals(Math.PI / 2, MathFuncs.asin(1.0), EPS, "asin(1)");
+        Assert.assertEquals(0.0, MathFuncs.acos(1.0), EPS, "acos(1)");
+        Assert.assertEquals(0.0, MathFuncs.atan(0.0), EPS, "atan(0)");
+        Assert.assertEquals(Math.PI / 4, MathFuncs.atan(1.0), EPS, "atan(1)");
+        Assert.assertEquals(Math.PI / 4, MathFuncs.atan2(1.0, 1.0), EPS, "atan2(1,1)");
+        Assert.assertEquals(0.0, MathFuncs.atan2(0.0, 1.0), EPS, "atan2(0,1)");
+    }
+
+    private static void testExpLog() {
+        Assert.assertEquals(1.0, MathFuncs.exp(0.0), EPS, "exp(0)");
+        Assert.assertEquals(Math.E, MathFuncs.exp(1.0), EPS, "exp(1)");
+        Assert.assertEquals(0.0, MathFuncs.log(1.0), EPS, "log(1)");
+        Assert.assertEquals(1.0, MathFuncs.log(Math.E), EPS, "log(e)");
+        Assert.assertEquals(0.0, MathFuncs.log10(1.0), EPS, "log10(1)");
+        Assert.assertEquals(3.0, MathFuncs.log10(1000.0), EPS, "log10(1000)");
+        Assert.assertEquals(0.0, MathFuncs.sinh(0.0), EPS, "sinh(0)");
+    }
+
+    private static void testCeilCbrtHypot() {
+        Assert.assertEquals(3.0, MathFuncs.ceil(2.1), EPS, "ceil(2.1)");
+        Assert.assertEquals(-2.0, MathFuncs.ceil(-2.9), EPS, "ceil(-2.9)");
+        Assert.assertEquals(2.0, MathFuncs.ceil(2.0), EPS, "ceil(2.0)");
+        Assert.assertEquals(3.0, MathFuncs.cbrt(27.0), EPS, "cbrt(27)");
+        Assert.assertEquals(-3.0, MathFuncs.cbrt(-27.0), EPS, "cbrt(-27)");
+        Assert.assertEquals(5.0, MathFuncs.hypot(3.0, 4.0), EPS, "hypot(3,4)");
+    }
+
     public static int run() {
         failures = 0;
         System.out.println("== MathFuncsTest ==");
@@ -84,6 +116,9 @@ public final class MathFuncsTest {
         check(MathFuncsTest::testPow);
         check(MathFuncsTest::testFloor);
         check(MathFuncsTest::testFabs);
+        check(MathFuncsTest::testTrig);
+        check(MathFuncsTest::testExpLog);
+        check(MathFuncsTest::testCeilCbrtHypot);
         System.out.println("  " + (failures == 0 ? "PASS" : failures + " FAILURE(S)"));
         return failures;
     }

@@ -71,4 +71,116 @@ public final class MathFuncs {
     public static double fabs(double x) {
         return Math.abs(x);
     }
+
+    // ------------------------------------------------------------------
+    // 三角函数
+    // ------------------------------------------------------------------
+
+    /**
+     * {@code double sin(double x)}：正弦，委托 {@link Math#sin(double)}。
+     */
+    public static double sin(double x) {
+        return Math.sin(x);
+    }
+
+    /**
+     * {@code double cos(double x)}：余弦，委托 {@link Math#cos(double)}。
+     */
+    public static double cos(double x) {
+        return Math.cos(x);
+    }
+
+    /**
+     * {@code double tan(double x)}：正切，委托 {@link Math#tan(double)}。
+     */
+    public static double tan(double x) {
+        return Math.tan(x);
+    }
+
+    /**
+     * {@code double asin(double x)}：反正弦，委托 {@link Math#asin(double)}。
+     */
+    public static double asin(double x) {
+        return Math.asin(x);
+    }
+
+    /**
+     * {@code double acos(double x)}：反余弦，委托 {@link Math#acos(double)}。
+     */
+    public static double acos(double x) {
+        return Math.acos(x);
+    }
+
+    /**
+     * {@code double atan(double x)}：反正切，委托 {@link Math#atan(double)}。
+     */
+    public static double atan(double x) {
+        return Math.atan(x);
+    }
+
+    /**
+     * {@code double atan2(double y, double x)}：两参数反正切，委托
+     * {@link Math#atan2(double, double)}（参数顺序与 C 一致为 {@code (y, x)}）。
+     */
+    public static double atan2(double y, double x) {
+        return Math.atan2(y, x);
+    }
+
+    // ------------------------------------------------------------------
+    // 指数 / 对数 / 双曲
+    // ------------------------------------------------------------------
+
+    /**
+     * {@code double exp(double x)}：自然指数，委托 {@link Math#exp(double)}。
+     */
+    public static double exp(double x) {
+        return Math.exp(x);
+    }
+
+    /**
+     * {@code double log(double x)}：自然对数，委托 {@link Math#log(double)}。
+     */
+    public static double log(double x) {
+        return Math.log(x);
+    }
+
+    /**
+     * {@code double log10(double x)}：常用对数，委托 {@link Math#log10(double)}。
+     */
+    public static double log10(double x) {
+        return Math.log10(x);
+    }
+
+    /**
+     * {@code double sinh(double x)}：双曲正弦，委托 {@link Math#sinh(double)}。
+     */
+    public static double sinh(double x) {
+        return Math.sinh(x);
+    }
+
+    // ------------------------------------------------------------------
+    // 其他
+    // ------------------------------------------------------------------
+
+    /**
+     * {@code double ceil(double x)}：向上取整，返回不小于 {@code x} 的最小整数值。
+     */
+    public static double ceil(double x) {
+        return Math.ceil(x);
+    }
+
+    /**
+     * {@code double cbrt(double x)}：立方根，委托 {@link Math#cbrt(double)}。
+     */
+    public static double cbrt(double x) {
+        return Math.cbrt(x);
+    }
+
+    /**
+     * {@code double hypot(double x, double y)}：{@code sqrt(x*x + y*y)}，委托
+     * {@link Math#hypot(double, double)}。
+     */
+    public static double hypot(double x, double y) {
+        return Math.hypot(x, y);
+    }
 }

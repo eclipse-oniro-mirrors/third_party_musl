@@ -170,6 +170,48 @@ public final class StringFuncsTest {
         Assert.assertEquals(255, StringFuncs.memcmp(new byte[] {(byte) 0xFF}, new byte[] {0}, 1), "memcmp signed byte");
     }
 
+    private static void testStrchrnul() {
+        Assert.assertEquals(2, StringFuncs.strchrnul("hello", 'l'), "strchrnul found");
+        Assert.assertEquals(5, StringFuncs.strchrnul("hello", 'z'), "strchrnul not found -> len");
+        Assert.assertEquals(5, StringFuncs.strchrnul("hello", 0), "strchrnul nul -> len");
+        Assert.assertEquals(0, StringFuncs.strchrnul("", 'z'), "strchrnul empty -> 0");
+    }
+
+    private static void testMemchr() {
+        Assert.assertEquals(2, StringFuncs.memchr(new byte[] {1, 2, 3, 4}, 3, 4), "memchr found");
+        Assert.assertEquals(-1, StringFuncs.memchr(new byte[] {1, 2, 3}, 5, 3), "memchr not found");
+        Assert.assertEquals(0, StringFuncs.memchr(new byte[] {1, 2, 3}, 1, 1), "memchr first");
+        Assert.assertEquals(-1, StringFuncs.memchr(new byte[0], 'a', 0), "memchr empty");
+        // 无符号字节：0xFF(-1) 可匹配 0xFF
+        Assert.assertEquals(0, StringFuncs.memchr(new byte[] {(byte) 0xFF}, 0xFF, 1), "memchr unsigned");
+    }
+
+    private static void testMemcpy() {
+        byte[] dst = {9, 9, 9, 9};
+        StringFuncs.memcpy(dst, new byte[] {1, 2, 3}, 3);
+        Assert.assertEquals(1, dst[0], "memcpy d0");
+        Assert.assertEquals(2, dst[1], "memcpy d1");
+        Assert.assertEquals(3, dst[2], "memcpy d2");
+        Assert.assertEquals(9, dst[3], "memcpy d3 untouched");
+    }
+
+    private static void testMemmove() {
+        byte[] dst = {0, 0, 0};
+        StringFuncs.memmove(dst, new byte[] {5, 6, 7}, 3);
+        Assert.assertEquals(5, dst[0], "memmove d0");
+        Assert.assertEquals(6, dst[1], "memmove d1");
+        Assert.assertEquals(7, dst[2], "memmove d2");
+    }
+
+    private static void testMemset() {
+        byte[] dst = {1, 2, 3, 4};
+        StringFuncs.memset(dst, 0x61, 3);
+        Assert.assertEquals(0x61, dst[0], "memset d0");
+        Assert.assertEquals(0x61, dst[1], "memset d1");
+        Assert.assertEquals(0x61, dst[2], "memset d2");
+        Assert.assertEquals(4, dst[3], "memset d3 untouched");
+    }
+
     public static int run() {
         failures = 0;
         System.out.println("== StringFuncsTest ==");
@@ -186,6 +228,11 @@ public final class StringFuncsTest {
         check(StringFuncsTest::testStrcspn);
         check(StringFuncsTest::testStrpbrk);
         check(StringFuncsTest::testMemcmp);
+        check(StringFuncsTest::testStrchrnul);
+        check(StringFuncsTest::testMemchr);
+        check(StringFuncsTest::testMemcpy);
+        check(StringFuncsTest::testMemmove);
+        check(StringFuncsTest::testMemset);
         System.out.println("  " + (failures == 0 ? "PASS" : failures + " FAILURE(S)"));
         return failures;
     }

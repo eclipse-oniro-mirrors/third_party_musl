@@ -158,4 +158,78 @@ public final class CtypeFuncs {
         }
         return c;
     }
+
+    // ------------------------------------------------------------------
+    // 打印 / 标点 / 控制字符
+    // ------------------------------------------------------------------
+
+    /**
+     * {@code int isgraph(int c)}：可见字符（除空格），即 {@code 0x21..0x7E}。
+     *
+     * <p>musl 实现 {@code (unsigned)c - 0x21 < 0x5e}。</p>
+     *
+     * @param c 待判断字符码值
+     * @return 可见字符返回 {@code true}
+     */
+    public static boolean isgraph(int c) {
+        return c >= 0x21 && c <= 0x7E;
+    }
+
+    /**
+     * {@code int isprint(int c)}：可打印字符，即 {@code 0x20..0x7E}。
+     *
+     * <p>musl 实现 {@code (unsigned)c - 0x20 < 0x5f}。</p>
+     *
+     * @param c 待判断字符码值
+     * @return 可打印字符返回 {@code true}
+     */
+    public static boolean isprint(int c) {
+        return c >= 0x20 && c <= 0x7E;
+    }
+
+    /**
+     * {@code int ispunct(int c)}：标点符号，即 {@code isgraph(c) && !isalnum(c)}。
+     *
+     * @param c 待判断字符码值
+     * @return 标点符号返回 {@code true}
+     */
+    public static boolean ispunct(int c) {
+        return isgraph(c) && !isalnum(c);
+    }
+
+    /**
+     * {@code int iscntrl(int c)}：控制字符，即 {@code (unsigned)c < 0x20 || c == 0x7F}。
+     *
+     * @param c 待判断字符码值
+     * @return 控制字符返回 {@code true}
+     */
+    public static boolean iscntrl(int c) {
+        return (c >= 0 && c < 0x20) || c == 0x7F;
+    }
+
+    // ------------------------------------------------------------------
+    // BSD ASCII 扩展
+    // ------------------------------------------------------------------
+
+    /**
+     * {@code int isascii(int c)}：是否为 ASCII 字符（{@code 0..0x7F}）。
+     *
+     * <p>musl 宏实现 {@code (unsigned)c < 128}。</p>
+     *
+     * @param c 待判断字符码值
+     * @return ASCII 字符返回 {@code true}
+     */
+    public static boolean isascii(int c) {
+        return c >= 0 && c <= 0x7F;
+    }
+
+    /**
+     * {@code int toascii(int c)}：仅保留低 7 位（{@code c & 0x7F}）。
+     *
+     * @param c 待转换字符码值
+     * @return 截断到 7 位后的值
+     */
+    public static int toascii(int c) {
+        return c & 0x7F;
+    }
 }
