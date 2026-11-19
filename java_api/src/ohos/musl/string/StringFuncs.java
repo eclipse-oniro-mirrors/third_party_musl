@@ -371,4 +371,220 @@ public final class StringFuncs {
     public static void memset(byte[] dst, int c, int n) {
         java.util.Arrays.fill(dst, 0, n, (byte) c);
     }
+
+    // ------------------------------------------------------------------
+    // memmem（GNU 扩展，Two-Way 算法）
+    // ------------------------------------------------------------------
+
+    /**
+     * {@code void *memmem(const void *h, size_t hl, const void *n, size_t nl)}
+     * （&lt;string.h&gt; GNU 扩展）：在字节数组 {@code h} 前 {@code hl} 字节中查找字节
+     * 序列 {@code n} 前 {@code nl} 字节的首次出现，返回下标；未找到（NULL）返回 -1。
+     *
+     * <p>移植 musl：空 needle 返回 0；needle 长于 haystack 返回 -1；长度 1..4 使用
+     * 专用滑动窗口；更长使用 Two-Way 字符串匹配（O(n) 平均/最坏）。</p>
+     *
+     * @param h haystack 字节数组
+     * @param hl haystack 长度（需不超过数组长度）
+     * @param n needle 字节数组
+     * @param nl needle 长度（需不超过数组长度）
+     * @return 首次出现的下标，未找到返回 -1
+     */
+    public static int memmem(byte[] h, int hl, byte[] n, int nl) {
+        if (nl == 0) {
+            return 0;
+        }
+        if (hl < nl) {
+            return -1;
+        }
+        if (nl == 1) {
+            return memchr(h, n[0], hl);
+        }
+        if (nl == 2) {
+            return twobyteMemmem(h, hl, n);
+        }
+        if (nl == 3) {
+            return threebyteMemmem(h, hl, n);
+        }
+        if (nl == 4) {
+            return fourbyteMemmem(h, hl, n);
+        }
+        return twowayMemmem(h, hl, n, nl);
+    }
+
+    private static int twobyteMemmem(byte[] h, int hl, byte[] n) {
+        int nw = ((n[0] & 0xFF) << 8) | (n[1] & 0xFF);
+        int hw = ((h[0] & 0xFF) << 8) | (h[1] & 0xFF);
+        if (hw == nw) {
+            return 0;
+        }
+        for (int i = 2; i < hl; i++) {
+            hw = ((hw << 8) | (h[i] & 0xFF)) & 0xFFFF;
+            if (hw == nw) {
+                return i - 1;
+            }
+        }
+        return -1;
+    }
+
+    private static int threebyteMemmem(byte[] h, int hl, byte[] n) {
+        int nw = ((n[0] & 0xFF) << 16) | ((n[1] & 0xFF) << 8) | (n[2] & 0xFF);
+        int hw = ((h[0] & 0xFF) << 16) | ((h[1] & 0xFF) << 8) | (h[2] & 0xFF);
+        if (hw == nw) {
+            return 0;
+        }
+        for (int i = 3; i < hl; i++) {
+            hw = ((hw << 8) | (h[i] & 0xFF)) & 0xFFFFFF;
+            if (hw == nw) {
+                return i - 2;
+            }
+        }
+        return -1;
+    }
+
+    private static int fourbyteMemmem(byte[] h, int hl, byte[] n) {
+        int nw = ((n[0] & 0xFF) << 24) | ((n[1] & 0xFF) << 16) | ((n[2] & 0xFF) << 8)
+                | (n[3] & 0xFF);
+        int hw = ((h[0] & 0xFF) << 24) | ((h[1] & 0xFF) << 16) | ((h[2] & 0xFF) << 8)
+                | (h[3] & 0xFF);
+        if (hw == nw) {
+            return 0;
+        }
+        for (int i = 4; i < hl; i++) {
+            hw = (hw << 8) | (h[i] & 0xFF);
+            if (hw == nw) {
+                return i - 3;
+            }
+        }
+        return -1;
+    }
+
+    private static int twowayMemmem(byte[] h, int hl, byte[] n, int l) {
+        boolean[] inNeedle = new boolean[256];
+        int[] shift = new int[256];
+        for (int i = 0; i < l; i++) {
+            int b = n[i] & 0xFF;
+            inNeedle[b] = true;
+            shift[b] = i + 1;
+        }
+
+        // 计算 maximal suffix（正向比较）
+        int ip = -1;
+        int jp = 0;
+        int k = 1;
+        int p = 1;
+        while (jp + k < l) {
+            int a = n[ip + k] & 0xFF;
+            int b = n[jp + k] & 0xFF;
+            if (a == b) {
+                if (k == p) {
+                    jp += p;
+                    k = 1;
+                } else {
+                    k++;
+                }
+            } else if (a > b) {
+                jp += k;
+                k = 1;
+                p = jp - ip;
+            } else {
+                ip = jp++;
+                k = 1;
+                p = 1;
+            }
+        }
+        int ms = ip;
+        int p0 = p;
+
+        // 反向比较的 maximal suffix
+        ip = -1;
+        jp = 0;
+        k = 1;
+        p = 1;
+        while (jp + k < l) {
+            int a = n[ip + k] & 0xFF;
+            int b = n[jp + k] & 0xFF;
+            if (a == b) {
+                if (k == p) {
+                    jp += p;
+                    k = 1;
+                } else {
+                    k++;
+                }
+            } else if (a < b) {
+                jp += k;
+                k = 1;
+                p = jp - ip;
+            } else {
+                ip = jp++;
+                k = 1;
+                p = 1;
+            }
+        }
+        if (ip + 1 > ms + 1) {
+            ms = ip;
+        } else {
+            p = p0;
+        }
+
+        // 周期 needle？
+        int mem0;
+        if (!equalsRange(n, 0, n, p, ms + 1)) {
+            mem0 = 0;
+            p = Math.max(ms, l - ms - 1) + 1;
+        } else {
+            mem0 = l - p;
+        }
+        int mem = 0;
+
+        int hpos = 0;
+        while (true) {
+            if (hl - hpos < l) {
+                return -1;
+            }
+            int last = h[hpos + l - 1] & 0xFF;
+            if (inNeedle[last]) {
+                k = l - shift[last];
+                if (k != 0) {
+                    if (k < mem) {
+                        k = mem;
+                    }
+                    hpos += k;
+                    mem = 0;
+                    continue;
+                }
+            } else {
+                hpos += l;
+                mem = 0;
+                continue;
+            }
+            // 比较右半
+            for (k = Math.max(ms + 1, mem); k < l && (n[k] & 0xFF) == (h[hpos + k] & 0xFF); k++) {
+                // 空循环体
+            }
+            if (k < l) {
+                hpos += k - ms;
+                mem = 0;
+                continue;
+            }
+            // 比较左半
+            for (k = ms + 1; k > mem && (n[k - 1] & 0xFF) == (h[hpos + k - 1] & 0xFF); k--) {
+                // 空循环体
+            }
+            if (k <= mem) {
+                return hpos;
+            }
+            hpos += p;
+            mem = mem0;
+        }
+    }
+
+    private static boolean equalsRange(byte[] a, int aOff, byte[] b, int bOff, int len) {
+        for (int i = 0; i < len; i++) {
+            if (a[aOff + i] != b[bOff + i]) {
+                return false;
+            }
+        }
+        return true;
+    }
 }

@@ -27,9 +27,9 @@ C → Java 接口转换的探索与演示。
 
 因此规避了 `malloc`/`free`、`open`/`read`/`write`、`printf`、`errno` 等不适合直接映射的接口。
 
-## 接口清单与映射（共 60 个）
+## 接口清单与映射（共 65 个）
 
-### StringFuncs —— `<string.h>` / `<strings.h>`（18 个）
+### StringFuncs —— `<string.h>` / `<strings.h>`（19 个）
 
 | C 接口 | 头文件 | Java 方法 | 返回类型映射 |
 |---|---|---|---|
@@ -51,6 +51,7 @@ C → Java 接口转换的探索与演示。
 | `char *strchrnul(const char *, int)` | string.h | `strchrnul(String, int)` | 指针 → 下标，结尾 NUL → `len` |
 | `size_t strspn(const char *, const char *)` | string.h | `strspn(String, String)` | `size_t` → `int` |
 | `size_t strcspn(const char *, const char *)` | string.h | `strcspn(String, String)` | `size_t` → `int` |
+| `void *memmem(const void *, size_t, const void *, size_t)` | string.h | `memmem(byte[], int, byte[], int)` | 指针 → 下标，`NULL` → `-1` |
 
 ### CtypeFuncs —— `<ctype.h>`（16 个）
 
@@ -79,7 +80,7 @@ C → Java 接口转换的探索与演示。
 |---|---|---|
 | `int ffs(int)` | `ffs(int)` | `int`（1..32，0 表示无置位位） |
 
-### StdlibFuncs —— `<stdlib.h>`（7 个）
+### StdlibFuncs —— `<stdlib.h>`（10 个）
 
 | C 接口 | Java 方法 | 返回类型映射 |
 |---|---|---|
@@ -89,7 +90,16 @@ C → Java 接口转换的探索与演示。
 | `int atoi(const char *)` | `atoi(String)` | `int` |
 | `long atol(const char *)` | `atol(String)` | `long` |
 | `long long atoll(const char *)` | `atoll(String)` | `long long` → `long`（复用 `atol`） |
-| `double atof(const char *)` | `atof(String)` | `double`（strtod 子集） |
+| `double atof(const char *)` | `atof(String)` | `double`（委托 `strtod`） |
+| `double strtod(const char *, char **)` | `strtod(String)` | `double`（省略 end 指针） |
+| `long strtol(const char *, char **, int)` | `strtol(String, int)` | `long`（省略 end 指针） |
+| `void qsort(void *, size_t, size_t, cmp)` | `qsort(T[], Comparator)` | `void*` 数组 → 泛型 `T[]`，`cmp` → `Comparator` |
+
+### RegexFuncs —— `<fnmatch.h>`（1 个）
+
+| C 接口 | Java 方法 | 返回类型映射 |
+|---|---|---|
+| `int fnmatch(const char *, const char *, int)` | `fnmatch(String, String, int)` | `0`/`FNM_NOMATCH` → `boolean`，`FNM_*` 常量定义于 `RegexFuncs` |
 
 ### MathFuncs —— `<math.h>`（18 个）
 
@@ -127,7 +137,12 @@ C → Java 接口转换的探索与演示。
 | 大小写折叠 | `strcasecmp`/`strncasecmp` 仅 ASCII（非 ICU） | 仅 ASCII |
 | `abs(INT_MIN)` | 未定义行为 | 溢出回绕，仍为 `Integer.MIN_VALUE` |
 | `atoi` 溢出 | 未定义行为 | 随 int 溢出回绕，与 musl「按负数累加」一致 |
-| `atof` 解析 | 完整 `strtod`（含 C99 十六进制浮点 `0x.8p1`） | 仅 strtod 子集：十进制整数/小数/科学计数法 + `inf`/`infinity`/`nan`，不支持十六进制浮点 |
+| `atof` 解析 | 完整 `strtod`（含 C99 十六进制浮点 `0x.8p1`） | 委托 `strtod`，含 C99 十六进制浮点 |
+| `strtod` 解析 | `__floatscan` 完整语义 | 十进制子串交 `Double.parseDouble`（正确舍入），十六进制用 `BigInteger` + `Math.scalb`；指数越界转 `±Inf`/`0` |
+| `strtol` 溢出 | `ERANGE` 下返回 `LONG_MAX`/`LONG_MIN` | 正/负溢出钳制到 `Long.MAX_VALUE`/`Long.MIN_VALUE` |
+| `qsort` 算法 | smoothsort（Leonardo 堆），原地 O(1) | 移植同一算法，比较回调映射为 `Comparator` |
+| `memmem` 算法 | 长度 1..4 专用窗口 + Two-Way | 移植同一算法，返回下标（未找到 `-1`） |
+| `fnmatch` 类别 | `[[:alpha:]]` 依赖 locale，未完全支持 | 字符类 `[...]` 支持范围/取反/转义，但未实现 POSIX 字符类 `[[:alpha:]]` |
 | `memcpy/memmove/memset` 返回值 | 返回目标指针（便于链式调用） | 省略 `void*` 返回值，方法返回 `void` |
 | `ffs(i)` 语义 | 最低置位位编号（1..N），`i==0` → 0 | `Integer.numberOfTrailingZeros(i)+1`，`i==0` → 0 |
 
@@ -140,10 +155,11 @@ C → Java 接口转换的探索与演示。
 java_api/
 ├── README.md
 ├── src/ohos/musl/                  # 主代码（按类型子目录，仿 musl src/）
-│   ├── string/StringFuncs.java     # ohos.musl.string  string.h / strings.h（18 个）
+│   ├── string/StringFuncs.java     # ohos.musl.string  string.h / strings.h（19 个）
 │   ├── ctype/CtypeFuncs.java       # ohos.musl.ctype   ctype.h（16 个）
 │   ├── misc/MiscFuncs.java         # ohos.musl.misc    strings.h：ffs（1 个，对齐 musl src/misc/）
-│   ├── stdlib/StdlibFuncs.java     # ohos.musl.stdlib  stdlib.h（7 个）
+│   ├── stdlib/StdlibFuncs.java     # ohos.musl.stdlib  stdlib.h（10 个）
+│   ├── regex/RegexFuncs.java       # ohos.musl.regex   fnmatch.h（1 个，对齐 musl src/regex/）
 │   ├── math/MathFuncs.java         # ohos.musl.math    math.h（18 个）
 │   └── MuslDemo.java               # ohos.musl         演示入口
 └── test/ohos/musl/                 # 测试（单独目录，按类型子目录）
@@ -153,6 +169,7 @@ java_api/
     ├── ctype/CtypeFuncsTest.java   # ohos.musl.ctype
     ├── misc/MiscFuncsTest.java     # ohos.musl.misc
     ├── stdlib/StdlibFuncsTest.java # ohos.musl.stdlib
+    ├── regex/RegexFuncsTest.java   # ohos.musl.regex
     └── math/MathFuncsTest.java     # ohos.musl.math
 ```
 
@@ -176,6 +193,8 @@ java -cp out ohos.musl.TestRunner # 测试（全部通过时退出码为 0）
 == CtypeFuncsTest ==
   PASS
 == MiscFuncsTest ==
+  PASS
+== RegexFuncsTest ==
   PASS
 == StdlibFuncsTest ==
   PASS

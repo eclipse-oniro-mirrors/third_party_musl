@@ -18,6 +18,7 @@ package ohos.musl;
 import ohos.musl.ctype.CtypeFuncsTest;
 import ohos.musl.math.MathFuncsTest;
 import ohos.musl.misc.MiscFuncsTest;
+import ohos.musl.regex.RegexFuncsTest;
 import ohos.musl.stdlib.StdlibFuncsTest;
 import ohos.musl.string.StringFuncsTest;
 
@@ -40,6 +41,7 @@ public final class TestRunner {
         total += StringFuncsTest.run();
         total += CtypeFuncsTest.run();
         total += MiscFuncsTest.run();
+        total += RegexFuncsTest.run();
         total += StdlibFuncsTest.run();
         total += MathFuncsTest.run();
 

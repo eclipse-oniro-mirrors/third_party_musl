@@ -212,6 +212,80 @@ public final class StringFuncsTest {
         Assert.assertEquals(4, dst[3], "memset d3 untouched");
     }
 
+    private static void testMemmem() {
+        // 空 needle / needle 长于 haystack
+        Assert.assertEquals(0, StringFuncs.memmem(new byte[] {1, 2, 3}, 3, new byte[] {}, 0),
+                "memmem empty needle");
+        Assert.assertEquals(-1, StringFuncs.memmem(new byte[] {1, 2}, 2, new byte[] {1, 2, 3}, 3),
+                "memmem needle longer");
+
+        // nl == 1
+        Assert.assertEquals(2, StringFuncs.memmem(new byte[] {1, 2, 3, 4}, 4, new byte[] {3}, 1),
+                "memmem len1 found");
+        Assert.assertEquals(-1, StringFuncs.memmem(new byte[] {1, 2, 3}, 3, new byte[] {9}, 1),
+                "memmem len1 not found");
+
+        // nl == 2
+        Assert.assertEquals(1, StringFuncs.memmem(new byte[] {1, 2, 3, 4}, 4, new byte[] {2, 3}, 2),
+                "memmem len2");
+        Assert.assertEquals(0, StringFuncs.memmem(new byte[] {1, 2, 1, 2}, 4, new byte[] {1, 2}, 2),
+                "memmem len2 first");
+        Assert.assertEquals(2, StringFuncs.memmem(new byte[] {1, 1, 1, 2}, 4, new byte[] {1, 2}, 2),
+                "memmem len2 repeated");
+        Assert.assertEquals(-1, StringFuncs.memmem(new byte[] {1, 2, 3}, 3, new byte[] {3, 4}, 2),
+                "memmem len2 not found");
+
+        // nl == 3
+        Assert.assertEquals(0, StringFuncs.memmem(new byte[] {1, 2, 3, 4}, 4, new byte[] {1, 2, 3}, 3),
+                "memmem len3");
+        Assert.assertEquals(1, StringFuncs.memmem(new byte[] {9, 1, 2, 3}, 4, new byte[] {1, 2, 3}, 3),
+                "memmem len3 pos1");
+
+        // nl == 4
+        Assert.assertEquals(2, StringFuncs.memmem(new byte[] {9, 9, 1, 2, 3, 4}, 6,
+                new byte[] {1, 2, 3, 4}, 4), "memmem len4");
+
+        // nl >= 5（Two-Way）
+        Assert.assertEquals(0, StringFuncs.memmem(new byte[] {1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 6}, 11,
+                new byte[] {1, 2, 3, 4, 5}, 5), "memmem twoway first");
+        Assert.assertEquals(3, StringFuncs.memmem(new byte[] {9, 9, 9, 1, 2, 3, 4, 5, 9}, 9,
+                new byte[] {1, 2, 3, 4, 5}, 5), "memmem twoway pos3");
+        Assert.assertEquals(-1, StringFuncs.memmem(new byte[] {1, 2, 3, 4, 9}, 5,
+                new byte[] {1, 2, 3, 4, 5}, 5), "memmem twoway not found");
+        Assert.assertEquals(2, StringFuncs.memmem(new byte[] {9, 9, 1, 2, 1, 2, 1, 9, 9}, 9,
+                new byte[] {1, 2, 1, 2, 1}, 5), "memmem periodic");
+
+        // 随机，以暴力搜索为 oracle
+        java.util.Random rnd = new java.util.Random(20261119);
+        for (int t = 0; t < 500; t++) {
+            int hl = rnd.nextInt(40);
+            int nl = rnd.nextInt(12);
+            byte[] hh = new byte[hl];
+            byte[] nn = new byte[nl];
+            rnd.nextBytes(hh);
+            rnd.nextBytes(nn);
+            int expected = bruteMemmem(hh, hl, nn, nl);
+            int actual = StringFuncs.memmem(hh, hl, nn, nl);
+            Assert.assertEquals(expected, actual, "memmem random hl=" + hl + " nl=" + nl);
+        }
+    }
+
+    private static int bruteMemmem(byte[] h, int hl, byte[] n, int nl) {
+        if (nl == 0) {
+            return 0;
+        }
+        outer:
+        for (int i = 0; i + nl <= hl; i++) {
+            for (int j = 0; j < nl; j++) {
+                if (h[i + j] != n[j]) {
+                    continue outer;
+                }
+            }
+            return i;
+        }
+        return -1;
+    }
+
     public static int run() {
         failures = 0;
         System.out.println("== StringFuncsTest ==");
@@ -233,6 +307,7 @@ public final class StringFuncsTest {
         check(StringFuncsTest::testMemcpy);
         check(StringFuncsTest::testMemmove);
         check(StringFuncsTest::testMemset);
+        check(StringFuncsTest::testMemmem);
         System.out.println("  " + (failures == 0 ? "PASS" : failures + " FAILURE(S)"));
         return failures;
     }
