@@ -44,6 +44,15 @@ int getgrouplist(const char *user, gid_t gid, gid_t *groups, int *ngroups)
 	fclose(f);
 
 	f = fopen("/etc/group", "rbe");
+#ifdef MUSL_EXTERNAL_FUNCTION
+	if (!f) {
+		int saved_errno = errno;
+		f = fopen("/etc/group_factory", "rbe");
+		if (!f) {
+			errno = saved_errno;
+		}
+	}
+#endif
 	if (!f && errno != ENOENT && errno != ENOTDIR)
 		goto cleanup;
 
