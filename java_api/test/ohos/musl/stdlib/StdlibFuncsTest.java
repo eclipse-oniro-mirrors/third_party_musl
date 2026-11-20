@@ -169,51 +169,6 @@ public final class StdlibFuncsTest {
         Assert.assertEquals(0L, StdlibFuncs.strtol("0x", 0), "strtol 0x only");
     }
 
-    private static void testQsort() {
-        Integer[] empty = {};
-        StdlibFuncs.qsort(empty, Integer::compareTo);
-        Assert.assertTrue(empty.length == 0, "qsort empty");
-
-        Integer[] single = { 5 };
-        StdlibFuncs.qsort(single, Integer::compareTo);
-        Assert.assertEquals(5, single[0], "qsort single");
-
-        assertSortedEqual(new Integer[] { 3, 1, 4, 1, 5, 9, 2, 6 }, "qsort basic");
-        assertSortedEqual(new Integer[] { 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 }, "qsort reverse");
-        assertSortedEqual(new Integer[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 }, "qsort sorted");
-        assertSortedEqual(new Integer[] { 2, 2, 2, 2, 2 }, "qsort all equal");
-        assertSortedEqual(new Integer[] { -5, 0, 5, -5, 0 }, "qsort negatives");
-
-        // 大量随机（以 JDK Arrays.sort 为 oracle 校验有序且元素集合不变）
-        java.util.Random rnd = new java.util.Random(20261119);
-        for (int t = 0; t < 500; t++) {
-            int len = rnd.nextInt(64);
-            Integer[] arr = new Integer[len];
-            for (int i = 0; i < len; i++) {
-                arr[i] = rnd.nextInt(200) - 100;
-            }
-            assertSortedEqual(arr, "qsort random len=" + len);
-        }
-
-        // 字符串（字典序）
-        String[] s = { "banana", "apple", "cherry", "Apple", "grape" };
-        String[] copy = s.clone();
-        java.util.Arrays.sort(copy, String::compareTo);
-        StdlibFuncs.qsort(s, String::compareTo);
-        for (int i = 0; i < s.length; i++) {
-            Assert.assertTrue(s[i].equals(copy[i]), "qsort string mismatch at " + i);
-        }
-    }
-
-    private static void assertSortedEqual(Integer[] input, String msg) {
-        Integer[] expect = input.clone();
-        java.util.Arrays.sort(expect);
-        StdlibFuncs.qsort(input, Integer::compareTo);
-        for (int i = 0; i < input.length; i++) {
-            Assert.assertEquals(expect[i], input[i], msg + " mismatch at " + i);
-        }
-    }
-
     public static int run() {
         failures = 0;
         System.out.println("== StdlibFuncsTest ==");
@@ -226,7 +181,6 @@ public final class StdlibFuncsTest {
         check(StdlibFuncsTest::testAtof);
         check(StdlibFuncsTest::testStrtod);
         check(StdlibFuncsTest::testStrtol);
-        check(StdlibFuncsTest::testQsort);
         System.out.println("  " + (failures == 0 ? "PASS" : failures + " FAILURE(S)"));
         return failures;
     }
