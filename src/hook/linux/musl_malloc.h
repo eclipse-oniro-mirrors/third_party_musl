@@ -29,11 +29,11 @@ extern "C" {
 #endif
 
 #ifdef USE_JEMALLOC
-extern void* je_malloc(size_t size);
-extern void* je_calloc(size_t count, size_t size);
-extern void* je_realloc(void* p, size_t newsize);
-extern void je_free(void* p);
-#define MuslFunc(func) je_ ## func
+extern void* oh_malloc(size_t size);
+extern void* oh_calloc(size_t count, size_t size);
+extern void* oh_realloc(void* p, size_t newsize);
+extern void oh_free(void* p);
+#define MuslFunc(func) oh_ ## func
 #else
 extern void *__libc_malloc(size_t size);
 extern void __libc_free(void* p);

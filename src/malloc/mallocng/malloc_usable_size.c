@@ -2,7 +2,7 @@
 #include "meta.h"
 
 #ifdef USE_JEMALLOC
-extern size_t je_malloc_usable_size(void *p);
+extern size_t oh_malloc_usable_size(void *p);
 #endif
 
 #ifndef HOOK_ENABLE
@@ -12,7 +12,7 @@ size_t __libc_malloc_usable_size(void *p)
 #endif
 {
 #ifdef USE_JEMALLOC
-	return je_malloc_usable_size(p);
+	return oh_malloc_usable_size(p);
 #endif
 	if (!p) return 0;
 	struct meta *g = get_meta(p);

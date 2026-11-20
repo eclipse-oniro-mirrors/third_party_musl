@@ -371,12 +371,12 @@ static bool init_aligned_alloc_function(void* malloc_shared_library_handler, Mal
 }
 
 #ifdef USE_JEMALLOC_RECYCLE_FUNC
-extern int je_reclaim_cache();
+extern int oh_reclaim_cache();
 static void handle_recycle_cache()
 {
 	int ret;
-	ret = je_reclaim_cache();
-	MUSL_LOGD("je_reclaim_cache result=%{public}d", ret);
+	ret = oh_reclaim_cache();
+	MUSL_LOGD("reclaim_cache result=%{public}d", ret);
 }
 
 static void init_jemalloc_recycle_handler()

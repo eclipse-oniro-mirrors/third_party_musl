@@ -80,6 +80,8 @@ declare_args() {
   musl_use_adlt = false
   musl_adlt_llvm = ""
   musl_extended_function = false
+  #Dynamic allocator selection flag
+  jemalloc_enable_dfmalloc2 = false
 
   # if (is_asan) {
   #   musl_linker_asan_name =

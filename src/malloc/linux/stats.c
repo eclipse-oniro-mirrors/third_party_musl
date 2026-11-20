@@ -25,22 +25,22 @@ int malloc_info(int options, FILE* fp)
 }
 
 #ifdef USE_JEMALLOC_DFX_INTF
-extern struct mallinfo je_mallinfo();
-extern void je_malloc_stats_print(void (*write_cb)(void *, const char *), void *cbopaque,
+extern struct mallinfo oh_mallinfo();
+extern void oh_malloc_stats_print(void (*write_cb)(void *, const char *), void *cbopaque,
 	const char *opts);
 #endif
 
 void malloc_stats_print(void (*write_cb) (void *, const char *), void *cbopaque, const char *opts)
 {
 #ifdef USE_JEMALLOC_DFX_INTF
-	je_malloc_stats_print(write_cb, cbopaque, opts);
+	oh_malloc_stats_print(write_cb, cbopaque, opts);
 #endif
 }
 
 struct mallinfo2 mallinfo2(void)
 {
 #ifdef USE_JEMALLOC_DFX_INTF
-	struct mallinfo info = je_mallinfo();
+	struct mallinfo info = oh_mallinfo();
 	struct mallinfo2 res = {
 		.hblks = info.hblks,
 		.hblkhd = info.hblkhd,
