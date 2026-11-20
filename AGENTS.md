@@ -28,7 +28,8 @@
 |---|---|
 | dlstart / dynlink / 动态链接 / 阶段1 / 自举 / ADLT / 合并文件 / prelink / 预链接 / crt / crt1 / scrt1 / rcrt1 / GOT entry / 延迟重定位 / ldso random / 链接器随机化 | `docs/knowledge/dynlink.md` |
 | namespace / dlns / dlopen_ns / separated / permitted_paths / allowed_libs / inherit / ns_inherit / ld_permitted_path / Dl_namespace / ns_configor / section.dir.map / 命名空间 / 隔离 | `docs/knowledge/namespace.md` |
-| malloc / mallocng / oldmalloc / jemalloc / fortify / _chk / 缓冲区溢出 / GWP-ASan / gwp_asan / guard page / 采样 / fdsan / file descriptor sanitizer / close_tag / FdTable / __fortify_error / MALLOC_FREELIST_HARDENED | `docs/knowledge/memory-safety.md` |
+| malloc / mallocng / oldmalloc / jemalloc / size class / group / meta / meta_area / avail_mask / MMAP_THRESHOLD / MALLOC_FREELIST_HARDENED / MALLOC_SECURE_ALL / MALLOC_REPORT_LIMIT / MuslFunc / MuslMalloc / hook so / libnative_hook / memleak tracker / hook_mode / 分配器 / 堆内存 | `docs/knowledge/malloc.md` |
+| fortify / _chk / 缓冲区溢出 / GWP-ASan / gwp_asan / guard page / 采样 / fdsan / file descriptor sanitizer / close_tag / FdTable / __fortify_error | `docs/knowledge/memory-safety.md` |
 | sigchain / 信号链 / signal_chain_handler / hook / RESTRACE / 钩子 / MallocDispatchType / memtrace / restrace / syscall_hooks / 系统调用钩子 / svc0_entry / HOOK_ENABLE / FDTRACK / dispatch table | `docs/knowledge/signal-hook.md` |
 | CFI / 控制流完整性 / cfi_slowpath / cfi_check / cfi_fail / icall_item / cfi_modifier / PT_OHOS_CFI_MODIFIER / CFI Shadow / shadow value / LIBRARY_ALIGNMENT / PAC / 间接调用 | `docs/knowledge/cfi.md` |
 | API / ABI / 兼容性 / 公共头文件 / libc.map.txt / version script / 符号导出 / NDK / 头文件 / include / MUSL_EXTERNAL_FUNCTION / musl_extended_function / PC专有API | `docs/knowledge/api-compatibility.md` |
