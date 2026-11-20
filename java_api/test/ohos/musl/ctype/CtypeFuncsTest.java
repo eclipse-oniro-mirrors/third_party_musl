@@ -13,7 +13,9 @@
  * limitations under the License.
  */
 
-package ohos.musl;
+package ohos.musl.ctype;
+
+import ohos.musl.Assert;
 
 /**
  * {@link CtypeFuncs} 的测试套件。期望值对照 musl 默认（非 ICU）路径的 ctype 宏/函数。
@@ -134,6 +136,56 @@ public final class CtypeFuncsTest {
         Assert.assertEquals('{', CtypeFuncs.toupper('{'), "toupper('{') unchanged");
     }
 
+    private static void testIsgraph() {
+        Assert.assertTrue(CtypeFuncs.isgraph('a'), "isgraph('a')");
+        Assert.assertTrue(CtypeFuncs.isgraph('1'), "isgraph('1')");
+        Assert.assertTrue(CtypeFuncs.isgraph('!'), "isgraph('!')");
+        Assert.assertTrue(!CtypeFuncs.isgraph(' '), "isgraph(' ') false");
+        Assert.assertTrue(!CtypeFuncs.isgraph('\t'), "isgraph('\\t') false");
+        Assert.assertTrue(!CtypeFuncs.isgraph(0x7F), "isgraph(DEL) false");
+    }
+
+    private static void testIsprint() {
+        Assert.assertTrue(CtypeFuncs.isprint('a'), "isprint('a')");
+        Assert.assertTrue(CtypeFuncs.isprint(' '), "isprint(' ')");
+        Assert.assertTrue(CtypeFuncs.isprint(0x7E), "isprint('~')");
+        Assert.assertTrue(!CtypeFuncs.isprint('\t'), "isprint('\\t') false");
+        Assert.assertTrue(!CtypeFuncs.isprint(0x7F), "isprint(DEL) false");
+    }
+
+    private static void testIspunct() {
+        Assert.assertTrue(CtypeFuncs.ispunct('!'), "ispunct('!')");
+        Assert.assertTrue(CtypeFuncs.ispunct('.'), "ispunct('.')");
+        Assert.assertTrue(!CtypeFuncs.ispunct('a'), "ispunct('a') false");
+        Assert.assertTrue(!CtypeFuncs.ispunct('1'), "ispunct('1') false");
+        Assert.assertTrue(!CtypeFuncs.ispunct(' '), "ispunct(' ') false");
+    }
+
+    private static void testIscntrl() {
+        Assert.assertTrue(CtypeFuncs.iscntrl(0), "iscntrl(0)");
+        Assert.assertTrue(CtypeFuncs.iscntrl('\t'), "iscntrl('\\t')");
+        Assert.assertTrue(CtypeFuncs.iscntrl(0x1F), "iscntrl(0x1F)");
+        Assert.assertTrue(CtypeFuncs.iscntrl(0x7F), "iscntrl(DEL)");
+        Assert.assertTrue(!CtypeFuncs.iscntrl(' '), "iscntrl(' ') false");
+        Assert.assertTrue(!CtypeFuncs.iscntrl('a'), "iscntrl('a') false");
+    }
+
+    private static void testIsascii() {
+        Assert.assertTrue(CtypeFuncs.isascii(0), "isascii(0)");
+        Assert.assertTrue(CtypeFuncs.isascii('a'), "isascii('a')");
+        Assert.assertTrue(CtypeFuncs.isascii(0x7F), "isascii(0x7F)");
+        Assert.assertTrue(!CtypeFuncs.isascii(0x80), "isascii(0x80) false");
+        Assert.assertTrue(!CtypeFuncs.isascii(-1), "isascii(-1) false");
+        Assert.assertTrue(!CtypeFuncs.isascii(255), "isascii(255) false");
+    }
+
+    private static void testToascii() {
+        Assert.assertEquals('a', CtypeFuncs.toascii('a'), "toascii('a')");
+        Assert.assertEquals(0x69, CtypeFuncs.toascii(0xE9), "toascii(0xE9) -> 0x69");
+        Assert.assertEquals(0x41, CtypeFuncs.toascii(0x41), "toascii(0x41)");
+        Assert.assertEquals(0, CtypeFuncs.toascii(0x80), "toascii(0x80) -> 0");
+    }
+
     public static int run() {
         failures = 0;
         System.out.println("== CtypeFuncsTest ==");
@@ -147,6 +199,12 @@ public final class CtypeFuncsTest {
         check(CtypeFuncsTest::testIsblank);
         check(CtypeFuncsTest::testTolower);
         check(CtypeFuncsTest::testToupper);
+        check(CtypeFuncsTest::testIsgraph);
+        check(CtypeFuncsTest::testIsprint);
+        check(CtypeFuncsTest::testIspunct);
+        check(CtypeFuncsTest::testIscntrl);
+        check(CtypeFuncsTest::testIsascii);
+        check(CtypeFuncsTest::testToascii);
         System.out.println("  " + (failures == 0 ? "PASS" : failures + " FAILURE(S)"));
         return failures;
     }

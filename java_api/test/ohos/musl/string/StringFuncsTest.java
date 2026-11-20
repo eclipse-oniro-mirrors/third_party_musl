@@ -13,7 +13,9 @@
  * limitations under the License.
  */
 
-package ohos.musl;
+package ohos.musl.string;
+
+import ohos.musl.Assert;
 
 /**
  * {@link StringFuncs} 的测试套件。期望值对照 musl {@code src/string/*.c} 语义推演。
@@ -168,6 +170,122 @@ public final class StringFuncsTest {
         Assert.assertEquals(255, StringFuncs.memcmp(new byte[] {(byte) 0xFF}, new byte[] {0}, 1), "memcmp signed byte");
     }
 
+    private static void testStrchrnul() {
+        Assert.assertEquals(2, StringFuncs.strchrnul("hello", 'l'), "strchrnul found");
+        Assert.assertEquals(5, StringFuncs.strchrnul("hello", 'z'), "strchrnul not found -> len");
+        Assert.assertEquals(5, StringFuncs.strchrnul("hello", 0), "strchrnul nul -> len");
+        Assert.assertEquals(0, StringFuncs.strchrnul("", 'z'), "strchrnul empty -> 0");
+    }
+
+    private static void testMemchr() {
+        Assert.assertEquals(2, StringFuncs.memchr(new byte[] {1, 2, 3, 4}, 3, 4), "memchr found");
+        Assert.assertEquals(-1, StringFuncs.memchr(new byte[] {1, 2, 3}, 5, 3), "memchr not found");
+        Assert.assertEquals(0, StringFuncs.memchr(new byte[] {1, 2, 3}, 1, 1), "memchr first");
+        Assert.assertEquals(-1, StringFuncs.memchr(new byte[0], 'a', 0), "memchr empty");
+        // 无符号字节：0xFF(-1) 可匹配 0xFF
+        Assert.assertEquals(0, StringFuncs.memchr(new byte[] {(byte) 0xFF}, 0xFF, 1), "memchr unsigned");
+    }
+
+    private static void testMemcpy() {
+        byte[] dst = {9, 9, 9, 9};
+        StringFuncs.memcpy(dst, new byte[] {1, 2, 3}, 3);
+        Assert.assertEquals(1, dst[0], "memcpy d0");
+        Assert.assertEquals(2, dst[1], "memcpy d1");
+        Assert.assertEquals(3, dst[2], "memcpy d2");
+        Assert.assertEquals(9, dst[3], "memcpy d3 untouched");
+    }
+
+    private static void testMemmove() {
+        byte[] dst = {0, 0, 0};
+        StringFuncs.memmove(dst, new byte[] {5, 6, 7}, 3);
+        Assert.assertEquals(5, dst[0], "memmove d0");
+        Assert.assertEquals(6, dst[1], "memmove d1");
+        Assert.assertEquals(7, dst[2], "memmove d2");
+    }
+
+    private static void testMemset() {
+        byte[] dst = {1, 2, 3, 4};
+        StringFuncs.memset(dst, 0x61, 3);
+        Assert.assertEquals(0x61, dst[0], "memset d0");
+        Assert.assertEquals(0x61, dst[1], "memset d1");
+        Assert.assertEquals(0x61, dst[2], "memset d2");
+        Assert.assertEquals(4, dst[3], "memset d3 untouched");
+    }
+
+    private static void testMemmem() {
+        // 空 needle / needle 长于 haystack
+        Assert.assertEquals(0, StringFuncs.memmem(new byte[] {1, 2, 3}, 3, new byte[] {}, 0),
+                "memmem empty needle");
+        Assert.assertEquals(-1, StringFuncs.memmem(new byte[] {1, 2}, 2, new byte[] {1, 2, 3}, 3),
+                "memmem needle longer");
+
+        // nl == 1
+        Assert.assertEquals(2, StringFuncs.memmem(new byte[] {1, 2, 3, 4}, 4, new byte[] {3}, 1),
+                "memmem len1 found");
+        Assert.assertEquals(-1, StringFuncs.memmem(new byte[] {1, 2, 3}, 3, new byte[] {9}, 1),
+                "memmem len1 not found");
+
+        // nl == 2
+        Assert.assertEquals(1, StringFuncs.memmem(new byte[] {1, 2, 3, 4}, 4, new byte[] {2, 3}, 2),
+                "memmem len2");
+        Assert.assertEquals(0, StringFuncs.memmem(new byte[] {1, 2, 1, 2}, 4, new byte[] {1, 2}, 2),
+                "memmem len2 first");
+        Assert.assertEquals(2, StringFuncs.memmem(new byte[] {1, 1, 1, 2}, 4, new byte[] {1, 2}, 2),
+                "memmem len2 repeated");
+        Assert.assertEquals(-1, StringFuncs.memmem(new byte[] {1, 2, 3}, 3, new byte[] {3, 4}, 2),
+                "memmem len2 not found");
+
+        // nl == 3
+        Assert.assertEquals(0, StringFuncs.memmem(new byte[] {1, 2, 3, 4}, 4, new byte[] {1, 2, 3}, 3),
+                "memmem len3");
+        Assert.assertEquals(1, StringFuncs.memmem(new byte[] {9, 1, 2, 3}, 4, new byte[] {1, 2, 3}, 3),
+                "memmem len3 pos1");
+
+        // nl == 4
+        Assert.assertEquals(2, StringFuncs.memmem(new byte[] {9, 9, 1, 2, 3, 4}, 6,
+                new byte[] {1, 2, 3, 4}, 4), "memmem len4");
+
+        // nl >= 5（Two-Way）
+        Assert.assertEquals(0, StringFuncs.memmem(new byte[] {1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 6}, 11,
+                new byte[] {1, 2, 3, 4, 5}, 5), "memmem twoway first");
+        Assert.assertEquals(3, StringFuncs.memmem(new byte[] {9, 9, 9, 1, 2, 3, 4, 5, 9}, 9,
+                new byte[] {1, 2, 3, 4, 5}, 5), "memmem twoway pos3");
+        Assert.assertEquals(-1, StringFuncs.memmem(new byte[] {1, 2, 3, 4, 9}, 5,
+                new byte[] {1, 2, 3, 4, 5}, 5), "memmem twoway not found");
+        Assert.assertEquals(2, StringFuncs.memmem(new byte[] {9, 9, 1, 2, 1, 2, 1, 9, 9}, 9,
+                new byte[] {1, 2, 1, 2, 1}, 5), "memmem periodic");
+
+        // 随机，以暴力搜索为 oracle
+        java.util.Random rnd = new java.util.Random(20261119);
+        for (int t = 0; t < 500; t++) {
+            int hl = rnd.nextInt(40);
+            int nl = rnd.nextInt(12);
+            byte[] hh = new byte[hl];
+            byte[] nn = new byte[nl];
+            rnd.nextBytes(hh);
+            rnd.nextBytes(nn);
+            int expected = bruteMemmem(hh, hl, nn, nl);
+            int actual = StringFuncs.memmem(hh, hl, nn, nl);
+            Assert.assertEquals(expected, actual, "memmem random hl=" + hl + " nl=" + nl);
+        }
+    }
+
+    private static int bruteMemmem(byte[] h, int hl, byte[] n, int nl) {
+        if (nl == 0) {
+            return 0;
+        }
+        outer:
+        for (int i = 0; i + nl <= hl; i++) {
+            for (int j = 0; j < nl; j++) {
+                if (h[i + j] != n[j]) {
+                    continue outer;
+                }
+            }
+            return i;
+        }
+        return -1;
+    }
+
     public static int run() {
         failures = 0;
         System.out.println("== StringFuncsTest ==");
@@ -184,6 +302,12 @@ public final class StringFuncsTest {
         check(StringFuncsTest::testStrcspn);
         check(StringFuncsTest::testStrpbrk);
         check(StringFuncsTest::testMemcmp);
+        check(StringFuncsTest::testStrchrnul);
+        check(StringFuncsTest::testMemchr);
+        check(StringFuncsTest::testMemcpy);
+        check(StringFuncsTest::testMemmove);
+        check(StringFuncsTest::testMemset);
+        check(StringFuncsTest::testMemmem);
         System.out.println("  " + (failures == 0 ? "PASS" : failures + " FAILURE(S)"));
         return failures;
     }

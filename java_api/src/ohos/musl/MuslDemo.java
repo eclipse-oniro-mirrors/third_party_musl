@@ -15,6 +15,11 @@
 
 package ohos.musl;
 
+import ohos.musl.ctype.CtypeFuncs;
+import ohos.musl.math.MathFuncs;
+import ohos.musl.stdlib.StdlibFuncs;
+import ohos.musl.string.StringFuncs;
+
 /**
  * 演示 30 个 C 接口的 Java 版本（节选）。独立于现有编译流程：
  *
