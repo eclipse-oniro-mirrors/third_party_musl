@@ -180,6 +180,8 @@ inline void* __get_hook_config()
 }
 
 #define MUSL_HOOK_PARAM_NAME "libc.hook_mode"
+#define MUSL_HOOK_STARTUP_MODE_PARAM_NAME "libc.hook_mode.startup_mode"
+#define MUSL_HOOK_STARTUP_MODE_SYNC "Sync"
 #define OHOS_PARAM_MAX_SIZE 96
 #define FILE_NAME_MAX_SIZE 40
 

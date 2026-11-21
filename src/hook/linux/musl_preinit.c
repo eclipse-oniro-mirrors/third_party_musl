@@ -31,6 +31,7 @@ which need be escaped.
 
 #ifdef HOOK_ENABLE
 #include <unistd.h>
+#include <fcntl.h>
 #include <signal.h>
 #include "musl_malloc_dispatch_table.h"
 #include "musl_malloc.h"
@@ -118,6 +119,12 @@ void* function_of_shared_lib[LAST_FUNCTION];
 void* function_of_ohos_malloc_shared_lib[LAST_FUNCTION];
 void* function_of_memleak_shared_lib[LAST_FUNCTION];
 static enum EnumHookMode __hook_mode = STEP_HOOK_MODE;
+static bool __hook_sync_mode = false;
+static bool __hook_self_raise = false;
+#ifdef OHOS_ENABLE_PARAMETER
+static CachedHandle g_hookModeHandle = NULL;
+static CachedHandle g_syncModeHandle = NULL;
+#endif
 static void __uninstal_malloc_hook();
 
 static void get_native_hook_param(char *buf, unsigned int buf_len)
@@ -219,6 +226,77 @@ static bool get_proc_name(pid_t pid, char *buf, unsigned int buf_len)
 	}
 	(void)fclose(f);
 	return true;
+}
+
+static void get_hook_sync_mode_param()
+{
+#ifdef OHOS_ENABLE_PARAMETER
+	__hook_sync_mode = false;
+	if (!__hook_self_raise) {
+		return;
+	}
+	if (g_syncModeHandle == NULL || g_hookModeHandle == NULL) {
+		return;
+	}
+	const char *syncValue = CachedParameterGet(g_syncModeHandle);
+	if (syncValue == NULL || strncmp(syncValue, MUSL_HOOK_STARTUP_MODE_SYNC,
+		strlen(MUSL_HOOK_STARTUP_MODE_SYNC)) != 0) {
+		return;
+	}
+	const char *hookModeValue = CachedParameterGet(g_hookModeHandle);
+	if (hookModeValue == NULL || hookModeValue[0] == '\0') {
+		return;
+	}
+	const char *ptr = hookModeValue;
+	while (*ptr && *ptr != ':') {
+		++ptr;
+	}
+	if (*ptr != ':') {
+		return;
+	}
+	++ptr;
+	if ((size_t)(ptr - hookModeValue - 1) != strlen("startup") ||
+		strncmp(hookModeValue, "startup", strlen("startup")) != 0) {
+		return;
+	}
+	char hook_process_path[MAX_PROC_NAME_SIZE + 1] = {0};
+	if (*ptr == '\"') {
+		++ptr;
+		int idx = 0;
+		while (idx < MAX_PROC_NAME_SIZE - 1 && *ptr && *ptr != '\"') {
+			hook_process_path[idx++] = *ptr++;
+		}
+		hook_process_path[idx] = '\0';
+	} else {
+		int idx = 0;
+		while (idx < MAX_PROC_NAME_SIZE - 1 && *ptr) {
+			hook_process_path[idx++] = *ptr++;
+		}
+		hook_process_path[idx] = '\0';
+	}
+	char proc_name[MAX_PROC_NAME_SIZE + 1] = {0};
+	int fd = open("/proc/self/cmdline", O_RDONLY | O_CLOEXEC);
+	if (fd < 0) {
+		return;
+	}
+	ssize_t n = read(fd, proc_name, sizeof(proc_name) - 2);
+	close(fd);
+	if (n <= 0) {
+		return;
+	}
+	const char *pos = strrchr(proc_name, '/');
+	const char *file_name;
+	if (pos != NULL) {
+		file_name = pos + 1;
+	} else {
+		file_name = proc_name;
+	}
+	if (strncmp(file_name, hook_process_path, strlen(hook_process_path)) == 0) {
+		__hook_sync_mode = true;
+	}
+#else
+	return;
+#endif
 }
 
 static bool init_malloc_function(void* malloc_shared_library_handler, MallocMallocType* func, const char* prefix)
@@ -526,7 +604,13 @@ bool finish_install_ohos_malloc_hooks(struct musl_libc_globals* globals, const c
 		return false;
 	}
 	on_start_func_t start_func = (on_start_func_t)(function_of_shared_lib[ON_START_FUNCTION]);
-	if (!start_func(__uninstal_malloc_hook)) {
+	bool start_ret;
+	if (strncmp(__malloc_hook_function_prefix, prefix, strlen(prefix)) == 0) {
+		start_ret = start_func(__uninstal_malloc_hook, __hook_sync_mode);
+	} else {
+		start_ret = start_func(__uninstal_malloc_hook);
+	}
+	if (!start_ret) {
 		// __musl_log(__MUSL_LOG_ERROR, "%s: failed to start %s\n", getprogname(), prefix);
 		clear_function_table();
 		return false;
@@ -565,7 +649,11 @@ static void install_ohos_malloc_hook(struct musl_libc_globals* globals, const ch
 	if (!(shared_library_handle == NULL || shared_library_handle == (volatile void*)-1)) {
 		on_start_func_t start_func = (on_start_func_t)(function_of_shared_lib[ON_START_FUNCTION]);
 		if (start_func) {
-			start_func(__uninstal_malloc_hook);
+			if (strncmp(__malloc_hook_function_prefix, prefix, strlen(prefix)) == 0) {
+				start_func(__uninstal_malloc_hook, __hook_sync_mode);
+			} else {
+				start_func(__uninstal_malloc_hook);
+			}
 		}
 		volatile const struct MallocDispatchType* so_dispatch_value = (volatile const struct MallocDispatchType* )atomic_load_explicit(&__musl_libc_globals.so_dispatch_table, memory_order_acquire);
 		atomic_store_explicit(&__musl_libc_globals.current_dispatch_table, (volatile long long)so_dispatch_value, memory_order_seq_cst);
@@ -679,8 +767,14 @@ static void __install_malloc_hook()
 	if (shared_library_handle == NULL) {
 		MUSL_LOGI("HiProfiler, __install_malloc_hook __hook_mode %{public}d", __hook_mode);
 		if (__hook_mode == STEP_HOOK_MODE) {
-			atomic_store_explicit(&__musl_libc_globals.current_dispatch_table, (volatile const long long)&__ohos_malloc_hook_init_dispatch, memory_order_seq_cst);
-			atomic_store_explicit(&ohos_malloc_hook_shared_library, (volatile long long)-1, memory_order_seq_cst);
+			get_hook_sync_mode_param();
+			if (__hook_sync_mode) {
+				init_ohos_malloc_hook();
+				__hook_sync_mode = false;
+			} else {
+				atomic_store_explicit(&__musl_libc_globals.current_dispatch_table, (volatile const long long)&__ohos_malloc_hook_init_dispatch, memory_order_seq_cst);
+				atomic_store_explicit(&ohos_malloc_hook_shared_library, (volatile long long)-1, memory_order_seq_cst);
+			}
 		} else {
 			init_ohos_malloc_hook();
 		}
@@ -761,8 +855,9 @@ static void __install_memleak_tracker_hook(int32_t sigNum, siginfo_t *info, void
 static struct sigaction g_old_hook;
 static struct sigaction g_old_unhook;
 
-static void hook_dispatch(int sig)
+static void hook_dispatch(int sig, siginfo_t *info, void *ptr)
 {
+	__hook_self_raise = (info != NULL && info->si_pid == getpid());
 	__install_malloc_hook(sig);
 	if (g_old_hook.sa_handler &&
 		g_old_hook.sa_handler != SIG_DFL &&
@@ -784,7 +879,8 @@ static void unhook_dispatch(int sig)
 static void __install_malloc_hook_signal_handler(void)
 {
 	struct sigaction a = {};
-	a.sa_handler = hook_dispatch;
+	a.sa_sigaction = hook_dispatch;
+	a.sa_flags = SA_SIGINFO;
 	sigemptyset(&a.sa_mask);
 	sigaddset(&a.sa_mask, MUSL_SIGNAL_UNHOOK);
 	g_old_hook.sa_handler = NULL;
@@ -822,6 +918,10 @@ __attribute__((constructor(1))) static void __musl_initialize()
 	__set_default_malloc();
 	char hook_process_path[MAX_PROC_NAME_SIZE + 1] = {0};
 	parse_hook_variable(&__hook_mode, hook_process_path, sizeof(hook_process_path) - 1);
+#ifdef OHOS_ENABLE_PARAMETER
+	g_hookModeHandle = CachedParameterCreate(MUSL_HOOK_PARAM_NAME, "");
+	g_syncModeHandle = CachedParameterCreate(MUSL_HOOK_STARTUP_MODE_PARAM_NAME, "");
+#endif
 	MUSL_LOGI("HiProfiler, __musl_initialize %{public}d", __hook_mode);
 	if (__hook_mode == STARTUP_HOOK_MODE) {
 		char proc_name[MAX_PROC_NAME_SIZE + 1] = {0};
