@@ -286,6 +286,30 @@ public final class StringFuncsTest {
         return -1;
     }
 
+    private static void testMemrchr() {
+        byte[] a = {1, 2, 3, 2, 1};
+        Assert.assertEquals(3, StringFuncs.memrchr(a, 2, 5), "memrchr last 2");
+        Assert.assertEquals(4, StringFuncs.memrchr(a, 1, 5), "memrchr last 1");
+        Assert.assertEquals(0, StringFuncs.memrchr(a, 1, 1), "memrchr range only first");
+        Assert.assertEquals(-1, StringFuncs.memrchr(a, 1, 0), "memrchr n=0");
+        Assert.assertEquals(-1, StringFuncs.memrchr(a, 9, 5), "memrchr absent");
+        // 无符号字节：0xFF 与 -1 视为同一字节
+        Assert.assertEquals(1, StringFuncs.memrchr(new byte[] {0, (byte) 0xFF, 0}, -1, 3),
+                "memrchr unsigned byte");
+        Assert.assertEquals(1, StringFuncs.memrchr(new byte[] {5, 5, 5}, 5, 2), "memrchr bounded n");
+    }
+
+    private static void testRawmemchr() {
+        byte[] a = {1, 2, 3, 2, 1};
+        Assert.assertEquals(0, StringFuncs.rawmemchr(a, 1), "rawmemchr first");
+        Assert.assertEquals(1, StringFuncs.rawmemchr(a, 2), "rawmemchr 2");
+        Assert.assertEquals(2, StringFuncs.rawmemchr(a, 3), "rawmemchr 3");
+        Assert.assertEquals(-1, StringFuncs.rawmemchr(a, 9), "rawmemchr absent");
+        Assert.assertEquals(-1, StringFuncs.rawmemchr(new byte[0], 1), "rawmemchr empty");
+        Assert.assertEquals(1, StringFuncs.rawmemchr(new byte[] {0, (byte) 0xFF}, 255),
+                "rawmemchr unsigned byte");
+    }
+
     public static int run() {
         failures = 0;
         System.out.println("== StringFuncsTest ==");
@@ -307,6 +331,8 @@ public final class StringFuncsTest {
         check(StringFuncsTest::testMemcpy);
         check(StringFuncsTest::testMemmove);
         check(StringFuncsTest::testMemset);
+        check(StringFuncsTest::testMemrchr);
+        check(StringFuncsTest::testRawmemchr);
         check(StringFuncsTest::testMemmem);
         System.out.println("  " + (failures == 0 ? "PASS" : failures + " FAILURE(S)"));
         return failures;

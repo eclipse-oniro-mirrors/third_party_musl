@@ -373,6 +373,43 @@ public final class StringFuncs {
     }
 
     // ------------------------------------------------------------------
+    // GNU 扩展查找：memrchr / rawmemchr
+    // ------------------------------------------------------------------
+
+    /**
+     * {@code void *memrchr(const void *src, int c, size_t n)}（GNU 扩展）：在字节数组
+     * 前 {@code n} 字节中从后向前查找 {@code (unsigned char)c}，返回最后一次出现的下标；
+     * 未找到（C 返回 NULL）返回 -1。
+     *
+     * @param src 源字节数组
+     * @param c 待查找字节（仅低 8 位有效）
+     * @param n 查找的字节数（需不超过数组长度）
+     * @return 最后一次出现的下标，未找到返回 -1
+     */
+    public static int memrchr(byte[] src, int c, int n) {
+        int target = c & 0xFF;
+        for (int i = n - 1; i >= 0; i--) {
+            if ((src[i] & 0xFF) == target) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * {@code void *rawmemchr(const void *src, int c)}（GNU 扩展）：在字节数组中查找
+     * {@code (unsigned char)c} 首次出现的下标。C 中要求字符必然存在（未找到为未定义
+     * 行为），Java 版在未找到时返回 -1。
+     *
+     * @param src 源字节数组
+     * @param c 待查找字节（仅低 8 位有效）
+     * @return 首次出现的下标，未找到返回 -1
+     */
+    public static int rawmemchr(byte[] src, int c) {
+        return memchr(src, c, src.length);
+    }
+
+    // ------------------------------------------------------------------
     // memmem（GNU 扩展，Two-Way 算法）
     // ------------------------------------------------------------------
 
