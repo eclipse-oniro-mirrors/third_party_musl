@@ -27,9 +27,9 @@ C → Java 接口转换的探索与演示。
 
 因此规避了 `malloc`/`free`、`open`/`read`/`write`、`printf`、`errno` 等不适合直接映射的接口。
 
-## 接口清单与映射（共 64 个）
+## 接口清单与映射（共 72 个）
 
-### StringFuncs —— `<string.h>` / `<strings.h>`（19 个）
+### StringFuncs —— `<string.h>` / `<strings.h>`（21 个）
 
 | C 接口 | 头文件 | Java 方法 | 返回类型映射 |
 |---|---|---|---|
@@ -52,6 +52,8 @@ C → Java 接口转换的探索与演示。
 | `size_t strspn(const char *, const char *)` | string.h | `strspn(String, String)` | `size_t` → `int` |
 | `size_t strcspn(const char *, const char *)` | string.h | `strcspn(String, String)` | `size_t` → `int` |
 | `void *memmem(const void *, size_t, const void *, size_t)` | string.h | `memmem(byte[], int, byte[], int)` | 指针 → 下标，`NULL` → `-1` |
+| `void *memrchr(const void *, int, size_t)` | string.h | `memrchr(byte[], int, int)` | 指针 → 下标，`NULL` → `-1` |
+| `void *rawmemchr(const void *, int)` | string.h | `rawmemchr(byte[], int)` | 指针 → 下标，未找到 → `-1` |
 
 ### CtypeFuncs —— `<ctype.h>`（16 个）
 
@@ -80,19 +82,25 @@ C → Java 接口转换的探索与演示。
 |---|---|---|
 | `int ffs(int)` | `ffs(int)` | `int`（1..32，0 表示无置位位） |
 
-### StdlibFuncs —— `<stdlib.h>`（9 个）
+### StdlibFuncs —— `<stdlib.h>`（15 个）
 
 | C 接口 | Java 方法 | 返回类型映射 |
 |---|---|---|
 | `int abs(int)` | `abs(int)` | `int` |
 | `long labs(long)` | `labs(long)` | `long` |
 | `long long llabs(long long)` | `llabs(long)` | `long long` → `long`（均 64 位） |
+| `div_t div(int, int)` | `div(int, int)` | `div_t` → 嵌套类 `Div {int quot, rem}` |
+| `ldiv_t ldiv(long, long)` | `ldiv(long, long)` | `ldiv_t` → 嵌套类 `Ldiv {long quot, rem}` |
+| `lldiv_t lldiv(long long, long long)` | `lldiv(long, long)` | `long long` → `long`（复用 `ldiv`） |
 | `int atoi(const char *)` | `atoi(String)` | `int` |
 | `long atol(const char *)` | `atol(String)` | `long` |
 | `long long atoll(const char *)` | `atoll(String)` | `long long` → `long`（复用 `atol`） |
 | `double atof(const char *)` | `atof(String)` | `double`（委托 `strtod`） |
 | `double strtod(const char *, char **)` | `strtod(String)` | `double`（省略 end 指针） |
 | `long strtol(const char *, char **, int)` | `strtol(String, int)` | `long`（省略 end 指针） |
+| `unsigned long strtoul(const char *, char **, int)` | `strtoul(String, int)` | 无符号 → `long` 位模式；溢出钳制 `ULONG_MAX`（`-1L`） |
+| `unsigned long long strtoull(const char *, char **, int)` | `strtoull(String, int)` | 复用 `strtoul` |
+| `void *bsearch(const void *, const void *, size_t, size_t, int (*)(const void *, const void *))` | `bsearch(T, T[], Comparator<? super T>)` | 指针 → 下标，未找到 → `-1`；比较函数 → `Comparator` |
 
 ### RegexFuncs —— `<fnmatch.h>`（1 个）
 
@@ -139,7 +147,11 @@ C → Java 接口转换的探索与演示。
 | `atof` 解析 | 完整 `strtod`（含 C99 十六进制浮点 `0x.8p1`） | 委托 `strtod`，含 C99 十六进制浮点 |
 | `strtod` 解析 | `__floatscan` 完整语义 | 十进制子串交 `Double.parseDouble`（正确舍入），十六进制用 `BigInteger` + `Math.scalb`；指数越界转 `±Inf`/`0` |
 | `strtol` 溢出 | `ERANGE` 下返回 `LONG_MAX`/`LONG_MIN` | 正/负溢出钳制到 `Long.MAX_VALUE`/`Long.MIN_VALUE` |
+| `strtoul/strtoull` 无符号 | `unsigned long`/`unsigned long long` 无符号回绕 | Java 以 `long` 表示 64 位位模式（超出 `LONG_MAX` 表现为负值）；溢出钳制到 `ULONG_MAX`（`-1L`），负号按无符号回绕 |
+| `div/ldiv/lldiv` 返回值 | 返回 `div_t`/`ldiv_t`/`lldiv_t` 结构体 | 返回嵌套不可变类 `Div`/`Ldiv`；`long long` 复用 `long` |
+| `bsearch` 查找 | 返回命中元素的指针，未找到 `NULL` | 返回下标，未找到 `-1`；`(base, nmemb, size)` → 泛型 `T[]`，比较函数 → `Comparator` |
 | `memmem` 算法 | 长度 1..4 专用窗口 + Two-Way | 移植同一算法，返回下标（未找到 `-1`） |
+| `memrchr/rawmemchr` 未找到 | `memrchr` 返回 `NULL`；`rawmemchr` 未找到为未定义行为 | 均返回 `-1`；`rawmemchr` 省略长度参数，查找整个数组 |
 | `fnmatch` 类别 | `[[:alpha:]]` 依赖 locale，未完全支持 | 字符类 `[...]` 支持范围/取反/转义，但未实现 POSIX 字符类 `[[:alpha:]]` |
 | `memcpy/memmove/memset` 返回值 | 返回目标指针（便于链式调用） | 省略 `void*` 返回值，方法返回 `void` |
 | `ffs(i)` 语义 | 最低置位位编号（1..N），`i==0` → 0 | `Integer.numberOfTrailingZeros(i)+1`，`i==0` → 0 |
@@ -153,10 +165,10 @@ C → Java 接口转换的探索与演示。
 java_api/
 ├── README.md
 ├── src/ohos/musl/                  # 主代码（按类型子目录，仿 musl src/）
-│   ├── string/StringFuncs.java     # ohos.musl.string  string.h / strings.h（19 个）
+│   ├── string/StringFuncs.java     # ohos.musl.string  string.h / strings.h（21 个）
 │   ├── ctype/CtypeFuncs.java       # ohos.musl.ctype   ctype.h（16 个）
 │   ├── misc/MiscFuncs.java         # ohos.musl.misc    strings.h：ffs（1 个，对齐 musl src/misc/）
-│   ├── stdlib/StdlibFuncs.java     # ohos.musl.stdlib  stdlib.h（9 个）
+│   ├── stdlib/StdlibFuncs.java     # ohos.musl.stdlib  stdlib.h（15 个）
 │   ├── regex/RegexFuncs.java       # ohos.musl.regex   fnmatch.h（1 个，对齐 musl src/regex/）
 │   ├── math/MathFuncs.java         # ohos.musl.math    math.h（18 个）
 │   └── MuslDemo.java               # ohos.musl         演示入口

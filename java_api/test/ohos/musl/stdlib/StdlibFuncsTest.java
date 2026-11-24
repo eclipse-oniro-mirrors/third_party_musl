@@ -18,7 +18,7 @@ package ohos.musl.stdlib;
 import ohos.musl.Assert;
 
 /**
- * {@link StdlibFuncs}（stdlib.h：abs/labs/atoi）的测试套件。
+ * {@link StdlibFuncs}（stdlib.h：abs/labs/atoi/strtol/strtoul/div/ldiv/lldiv/bsearch）的测试套件。
  */
 public final class StdlibFuncsTest {
 
@@ -169,6 +169,120 @@ public final class StdlibFuncsTest {
         Assert.assertEquals(0L, StdlibFuncs.strtol("0x", 0), "strtol 0x only");
     }
 
+    private static void testDiv() {
+        StdlibFuncs.Div d = StdlibFuncs.div(5, 2);
+        Assert.assertEquals(2, d.quot, "div(5,2).quot");
+        Assert.assertEquals(1, d.rem, "div(5,2).rem");
+        d = StdlibFuncs.div(-5, 2);
+        Assert.assertEquals(-2, d.quot, "div(-5,2).quot");
+        Assert.assertEquals(-1, d.rem, "div(-5,2).rem");
+        d = StdlibFuncs.div(5, -2);
+        Assert.assertEquals(-2, d.quot, "div(5,-2).quot");
+        Assert.assertEquals(1, d.rem, "div(5,-2).rem");
+        d = StdlibFuncs.div(-5, -2);
+        Assert.assertEquals(2, d.quot, "div(-5,-2).quot");
+        Assert.assertEquals(-1, d.rem, "div(-5,-2).rem");
+        d = StdlibFuncs.div(0, 3);
+        Assert.assertEquals(0, d.quot, "div(0,3).quot");
+        Assert.assertEquals(0, d.rem, "div(0,3).rem");
+        d = StdlibFuncs.div(7, 7);
+        Assert.assertEquals(1, d.quot, "div(7,7).quot");
+        Assert.assertEquals(0, d.rem, "div(7,7).rem");
+        // INT_MIN / -1：C 为未定义行为，Java 溢出回绕
+        d = StdlibFuncs.div(Integer.MIN_VALUE, -1);
+        Assert.assertEquals(Integer.MIN_VALUE, d.quot, "div(INT_MIN,-1).quot");
+        Assert.assertEquals(0, d.rem, "div(INT_MIN,-1).rem");
+    }
+
+    private static void testLdiv() {
+        StdlibFuncs.Ldiv d = StdlibFuncs.ldiv(Long.MAX_VALUE, 2);
+        Assert.assertEquals(4611686018427387903L, d.quot, "ldiv(MAX,2).quot");
+        Assert.assertEquals(1L, d.rem, "ldiv(MAX,2).rem");
+        d = StdlibFuncs.ldiv(-7L, 3);
+        Assert.assertEquals(-2L, d.quot, "ldiv(-7,3).quot");
+        Assert.assertEquals(-1L, d.rem, "ldiv(-7,3).rem");
+        d = StdlibFuncs.ldiv(7L, -3);
+        Assert.assertEquals(-2L, d.quot, "ldiv(7,-3).quot");
+        Assert.assertEquals(1L, d.rem, "ldiv(7,-3).rem");
+        d = StdlibFuncs.ldiv(100L, 8);
+        Assert.assertEquals(12L, d.quot, "ldiv(100,8).quot");
+        Assert.assertEquals(4L, d.rem, "ldiv(100,8).rem");
+        // LONG_MIN / -1：C 为未定义行为，Java 溢出回绕
+        d = StdlibFuncs.ldiv(Long.MIN_VALUE, -1);
+        Assert.assertEquals(Long.MIN_VALUE, d.quot, "ldiv(LONG_MIN,-1).quot");
+        Assert.assertEquals(0L, d.rem, "ldiv(LONG_MIN,-1).rem");
+    }
+
+    private static void testLldiv() {
+        StdlibFuncs.Ldiv d = StdlibFuncs.lldiv(-5L, 2);
+        Assert.assertEquals(-2L, d.quot, "lldiv(-5,2).quot");
+        Assert.assertEquals(-1L, d.rem, "lldiv(-5,2).rem");
+        d = StdlibFuncs.lldiv(1000000000000L, 3);
+        Assert.assertEquals(333333333333L, d.quot, "lldiv big.quot");
+        Assert.assertEquals(1L, d.rem, "lldiv big.rem");
+    }
+
+    private static void testBsearch() {
+        java.util.Comparator<Integer> cmp = java.util.Comparator.naturalOrder();
+        Integer[] a = {1, 3, 5, 7, 9};
+        Assert.assertEquals(0, StdlibFuncs.bsearch(1, a, cmp), "bsearch first");
+        Assert.assertEquals(4, StdlibFuncs.bsearch(9, a, cmp), "bsearch last");
+        Assert.assertEquals(2, StdlibFuncs.bsearch(5, a, cmp), "bsearch mid");
+        Assert.assertEquals(-1, StdlibFuncs.bsearch(4, a, cmp), "bsearch absent mid");
+        Assert.assertEquals(-1, StdlibFuncs.bsearch(0, a, cmp), "bsearch absent low");
+        Assert.assertEquals(-1, StdlibFuncs.bsearch(10, a, cmp), "bsearch absent high");
+        Assert.assertEquals(-1, StdlibFuncs.bsearch(1, new Integer[0], cmp), "bsearch empty");
+
+        // 重复元素：命中值确定且等于 key
+        Integer[] dup = {2, 2, 2, 4};
+        int idx = StdlibFuncs.bsearch(2, dup, cmp);
+        Assert.assertTrue(idx >= 0 && idx < dup.length && dup[idx] == 2, "bsearch dup hit");
+
+        String[] words = {"apple", "banana", "cherry"};
+        Assert.assertEquals(1, StdlibFuncs.bsearch("banana", words, java.util.Comparator.naturalOrder()),
+                "bsearch string");
+        Assert.assertEquals(-1, StdlibFuncs.bsearch("fig", words, java.util.Comparator.naturalOrder()),
+                "bsearch string absent");
+    }
+
+    private static void testStrtoul() {
+        Assert.assertEquals(42L, StdlibFuncs.strtoul("42", 10), "strtoul 42");
+        Assert.assertEquals(26L, StdlibFuncs.strtoul("0x1A", 0), "strtoul auto hex");
+        Assert.assertEquals(26L, StdlibFuncs.strtoul("0x1A", 16), "strtoul base16 hex");
+        Assert.assertEquals(8L, StdlibFuncs.strtoul("010", 0), "strtoul auto octal");
+        Assert.assertEquals(5L, StdlibFuncs.strtoul("101", 2), "strtoul base2");
+        Assert.assertEquals(1295L, StdlibFuncs.strtoul("zz", 36), "strtoul base36");
+        Assert.assertEquals(0L, StdlibFuncs.strtoul("  +0", 0), "strtoul +0");
+
+        // 无符号回绕：-42 -> 2^64 - 42
+        Assert.assertEquals(-42L, StdlibFuncs.strtoul("-42", 10), "strtoul -42 wrap");
+        // -1 -> ULONG_MAX
+        Assert.assertEquals(-1L, StdlibFuncs.strtoul("  -1", 10), "strtoul -1 ulong_max");
+
+        // 大值位模式：2^63 -> Long.MIN_VALUE
+        Assert.assertEquals(Long.MIN_VALUE, StdlibFuncs.strtoul("9223372036854775808", 10), "strtoul 2^63");
+        // ULONG_MAX 精确值 -> -1L
+        Assert.assertEquals(-1L, StdlibFuncs.strtoul("18446744073709551615", 10), "strtoul ULONG_MAX");
+        Assert.assertEquals(-1L, StdlibFuncs.strtoul("0xFFFFFFFFFFFFFFFF", 0), "strtoul 0xFFFFFFFFFFFFFFFF");
+        // 溢出：2^64 -> 钳制 ULONG_MAX
+        Assert.assertEquals(-1L, StdlibFuncs.strtoul("18446744073709551616", 10), "strtoul overflow");
+
+        // 无有效数字 / 非法进制
+        Assert.assertEquals(0L, StdlibFuncs.strtoul("", 10), "strtoul empty");
+        Assert.assertEquals(0L, StdlibFuncs.strtoul("abc", 10), "strtoul no digit");
+        Assert.assertEquals(0L, StdlibFuncs.strtoul("0x", 0), "strtoul 0x only");
+        Assert.assertEquals(0L, StdlibFuncs.strtoul("42", 1), "strtoul bad base 1");
+        Assert.assertEquals(0L, StdlibFuncs.strtoul("42", 37), "strtoul bad base 37");
+    }
+
+    private static void testStrtoull() {
+        Assert.assertEquals(123L, StdlibFuncs.strtoull("123", 10), "strtoull 123");
+        Assert.assertEquals(255L, StdlibFuncs.strtoull("0xFF", 0), "strtoull 0xFF");
+        Assert.assertEquals(Long.MAX_VALUE, StdlibFuncs.strtoull("7FFFFFFFFFFFFFFF", 16), "strtoull hex max");
+        Assert.assertEquals(-1L, StdlibFuncs.strtoull("FFFFFFFFFFFFFFFF", 16), "strtoull ULLONG_MAX");
+        Assert.assertEquals(-42L, StdlibFuncs.strtoull("-42", 10), "strtoull -42 wrap");
+    }
+
     public static int run() {
         failures = 0;
         System.out.println("== StdlibFuncsTest ==");
@@ -181,6 +295,12 @@ public final class StdlibFuncsTest {
         check(StdlibFuncsTest::testAtof);
         check(StdlibFuncsTest::testStrtod);
         check(StdlibFuncsTest::testStrtol);
+        check(StdlibFuncsTest::testDiv);
+        check(StdlibFuncsTest::testLdiv);
+        check(StdlibFuncsTest::testLldiv);
+        check(StdlibFuncsTest::testBsearch);
+        check(StdlibFuncsTest::testStrtoul);
+        check(StdlibFuncsTest::testStrtoull);
         System.out.println("  " + (failures == 0 ? "PASS" : failures + " FAILURE(S)"));
         return failures;
     }

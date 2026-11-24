@@ -53,6 +53,11 @@ public final class MuslDemo {
         System.out.println("abs(-42)                  = " + StdlibFuncs.abs(-42));
         System.out.println("labs(-42L)                = " + StdlibFuncs.labs(-42L));
         System.out.println("atoi(\"  -42abc\")         = " + StdlibFuncs.atoi("  -42abc"));
+        System.out.println("div(5,2)                  = quot " + StdlibFuncs.div(5, 2).quot
+                + ", rem " + StdlibFuncs.div(5, 2).rem);
+        System.out.println("strtoul(\"0x1A\",0)        = " + StdlibFuncs.strtoul("0x1A", 0));
+        System.out.println("bsearch(\"banana\",[...])  = " + StdlibFuncs.bsearch("banana",
+                new String[] {"apple", "banana", "cherry"}, java.util.Comparator.naturalOrder()));
 
         // math.h
         System.out.println("sqrt(2.0)                = " + MathFuncs.sqrt(2.0));
