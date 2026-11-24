@@ -189,6 +189,20 @@ static bool get_proc_name(pid_t pid, char *buf, unsigned int buf_len)
 	return true;
 }
 
+static void get_hook_sync_mode_for_initialize()
+{
+#ifdef OHOS_ENABLE_PARAMETER
+	if (g_syncModeHandle == NULL) {
+		return;
+	}
+	const char *syncValue = CachedParameterGet(g_syncModeHandle);
+	if (syncValue != NULL && strncmp(syncValue, MUSL_HOOK_STARTUP_MODE_SYNC,
+		strlen(MUSL_HOOK_STARTUP_MODE_SYNC)) == 0) {
+		__hook_sync_mode = true;
+	}
+#endif
+}
+
 static void get_hook_sync_mode_param()
 {
 #ifdef OHOS_ENABLE_PARAMETER
@@ -869,7 +883,9 @@ __attribute__((constructor(1))) static void __musl_initialize()
 			MUSL_LOGI("HiProfiler, current proc %{public}s, , target proc %{public}s", file_name, hook_process_path);
 			if (strncmp(file_name, hook_process_path, strlen(hook_process_path)) == 0) {
 				atomic_store_explicit(&__hook_enable_hook_flag, (volatile bool)true, memory_order_seq_cst);
+				get_hook_sync_mode_for_initialize();
 				init_ohos_malloc_hook();
+				__hook_sync_mode = false;
 			} else {
 				__hook_mode = STEP_HOOK_MODE;
 			}
