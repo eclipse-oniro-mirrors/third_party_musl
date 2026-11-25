@@ -310,6 +310,45 @@ public final class StringFuncsTest {
                 "rawmemchr unsigned byte");
     }
 
+    private static void testStrCasestr() {
+        Assert.assertEquals(6, StringFuncs.strcasestr("Hello World", "world"), "strcasestr mixed case");
+        Assert.assertEquals(0, StringFuncs.strcasestr("Hello", "HELLO"), "strcasestr all upper");
+        Assert.assertEquals(2, StringFuncs.strcasestr("abcabc", "CA"), "strcasestr repeat");
+        Assert.assertEquals(0, StringFuncs.strcasestr("abc", ""), "strcasestr empty needle");
+        Assert.assertEquals(-1, StringFuncs.strcasestr("abc", "x"), "strcasestr absent");
+        Assert.assertEquals(0, StringFuncs.strcasestr("", ""), "strcasestr both empty");
+        Assert.assertEquals(-1, StringFuncs.strcasestr("", "a"), "strcasestr empty haystack");
+    }
+
+    private static void testStrverscmp() {
+        Assert.assertEquals(0, StringFuncs.strverscmp("foo", "foo"), "strverscmp equal");
+        Assert.assertTrue(StringFuncs.strverscmp("foo.1", "foo.9") < 0, "strverscmp foo.1 < foo.9");
+        Assert.assertTrue(StringFuncs.strverscmp("foo.9", "foo.1") > 0, "strverscmp foo.9 > foo.1");
+        Assert.assertTrue(StringFuncs.strverscmp("file10", "file2") > 0, "strverscmp file10 > file2");
+        Assert.assertTrue(StringFuncs.strverscmp("file2", "file10") < 0, "strverscmp file2 < file10");
+        Assert.assertTrue(StringFuncs.strverscmp("abc", "abd") < 0, "strverscmp plain");
+        Assert.assertTrue(StringFuncs.strverscmp("file01", "file02") < 0, "strverscmp leading zero");
+        Assert.assertTrue(StringFuncs.strverscmp("a10b", "a9b") > 0, "strverscmp mid digit run");
+    }
+
+    private static void testStpcpy() {
+        char[] buf = new char[10];
+        Assert.assertEquals(3, StringFuncs.stpcpy(buf, "abc"), "stpcpy return len");
+        Assert.assertEquals('a', buf[0], "stpcpy buf[0]");
+        Assert.assertEquals('c', buf[2], "stpcpy buf[2]");
+
+        Assert.assertEquals(3, StringFuncs.stpncpy(buf, "abcde", 3), "stpncpy truncate return");
+        Assert.assertEquals('c', buf[2], "stpncpy truncate buf[2]");
+
+        Assert.assertEquals(2, StringFuncs.stpncpy(buf, "ab", 5), "stpncpy pad return");
+        Assert.assertEquals('a', buf[0], "stpncpy pad buf[0]");
+        Assert.assertEquals(0, buf[2], "stpncpy pad buf[2] zero");
+        Assert.assertEquals(0, buf[4], "stpncpy pad buf[4] zero");
+
+        Assert.assertEquals(5, StringFuncs.stpncpy(buf, "abcde", 5), "stpncpy exact n");
+        Assert.assertEquals(0, StringFuncs.stpncpy(buf, "abc", 0), "stpncpy n=0");
+    }
+
     public static int run() {
         failures = 0;
         System.out.println("== StringFuncsTest ==");
@@ -334,6 +373,9 @@ public final class StringFuncsTest {
         check(StringFuncsTest::testMemrchr);
         check(StringFuncsTest::testRawmemchr);
         check(StringFuncsTest::testMemmem);
+        check(StringFuncsTest::testStrCasestr);
+        check(StringFuncsTest::testStrverscmp);
+        check(StringFuncsTest::testStpcpy);
         System.out.println("  " + (failures == 0 ? "PASS" : failures + " FAILURE(S)"));
         return failures;
     }

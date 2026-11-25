@@ -21,6 +21,7 @@ import ohos.musl.misc.MiscFuncsTest;
 import ohos.musl.regex.RegexFuncsTest;
 import ohos.musl.stdlib.StdlibFuncsTest;
 import ohos.musl.string.StringFuncsTest;
+import ohos.musl.wchar.WcharFuncsTest;
 
 /**
  * 测试套件入口：依次运行各测试类并汇总结果，失败时以非零码退出。
@@ -44,6 +45,7 @@ public final class TestRunner {
         total += RegexFuncsTest.run();
         total += StdlibFuncsTest.run();
         total += MathFuncsTest.run();
+        total += WcharFuncsTest.run();
 
         System.out.println();
         if (total == 0) {
