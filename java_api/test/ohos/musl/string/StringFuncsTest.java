@@ -320,6 +320,28 @@ public final class StringFuncsTest {
         Assert.assertEquals(-1, StringFuncs.strcasestr("", "a"), "strcasestr empty haystack");
     }
 
+    private static void testStrCasestrRandom() {
+        java.util.Random rnd = new java.util.Random(20261120);
+        for (int t = 0; t < 500; t++) {
+            int hl = rnd.nextInt(30);
+            StringBuilder h = new StringBuilder();
+            for (int i = 0; i < hl; i++) {
+                char c = (char) ('a' + rnd.nextInt(26));
+                h.append(rnd.nextBoolean() ? Character.toUpperCase(c) : c);
+            }
+            int nl = rnd.nextInt(6);
+            StringBuilder n = new StringBuilder();
+            for (int i = 0; i < nl; i++) {
+                n.append((char) ('a' + rnd.nextInt(26)));
+            }
+            String hs = h.toString();
+            String ns = n.toString();
+            int expected = hs.toLowerCase().indexOf(ns);
+            int actual = StringFuncs.strcasestr(hs, ns);
+            Assert.assertEquals(expected, actual, "strcasestr random");
+        }
+    }
+
     private static void testStrverscmp() {
         Assert.assertEquals(0, StringFuncs.strverscmp("foo", "foo"), "strverscmp equal");
         Assert.assertTrue(StringFuncs.strverscmp("foo.1", "foo.9") < 0, "strverscmp foo.1 < foo.9");
@@ -349,6 +371,60 @@ public final class StringFuncsTest {
         Assert.assertEquals(0, StringFuncs.stpncpy(buf, "abc", 0), "stpncpy n=0");
     }
 
+    private static void testMemccpy() {
+        byte[] dst = new byte[8];
+        Assert.assertEquals(3, StringFuncs.memccpy(dst, new byte[] {1, 2, 3, 4}, 3, 8), "memccpy found");
+        Assert.assertEquals(3, dst[2], "memccpy dst[2]");
+        Assert.assertEquals(0, dst[3], "memccpy dst[3] untouched");
+        Assert.assertEquals(-1, StringFuncs.memccpy(dst, new byte[] {1, 2}, 9, 2), "memccpy not found");
+        Assert.assertEquals(1, dst[0], "memccpy copied 1");
+        Assert.assertEquals(2, dst[1], "memccpy copied 2");
+        Assert.assertEquals(-1, StringFuncs.memccpy(dst, new byte[] {1, 2}, 3, 0), "memccpy n=0");
+        Assert.assertEquals(1, StringFuncs.memccpy(dst, new byte[] {7, 8}, 7, 2), "memccpy c at first");
+    }
+
+    private static void testMemccpyRandom() {
+        java.util.Random rnd = new java.util.Random(20261124);
+        for (int t = 0; t < 300; t++) {
+            int n = rnd.nextInt(16);
+            byte[] src = new byte[n];
+            rnd.nextBytes(src);
+            int c = rnd.nextInt(256);
+            byte[] dst = new byte[n];
+            int expected = -1;
+            for (int i = 0; i < n; i++) {
+                dst[i] = src[i];
+                if ((src[i] & 0xFF) == c) {
+                    expected = i + 1;
+                    break;
+                }
+            }
+            byte[] check = new byte[n];
+            int actual = StringFuncs.memccpy(check, src, c, n);
+            Assert.assertEquals(expected, actual, "memccpy random");
+            Assert.assertTrue(java.util.Arrays.equals(check, dst), "memccpy random content");
+        }
+    }
+
+    private static void testStrcpyCat() {
+        char[] dst = new char[10];
+        Assert.assertEquals(3, StringFuncs.strcpy(dst, "abc"), "strcpy return");
+        Assert.assertEquals('a', dst[0], "strcpy dst[0]");
+        Assert.assertEquals(0, dst[3], "strcpy terminator");
+
+        Assert.assertEquals(3, StringFuncs.strncpy(dst, "abcde", 3), "strncpy truncate");
+        Assert.assertEquals(2, StringFuncs.strncpy(dst, "ab", 5), "strncpy pad return");
+        Assert.assertEquals(0, dst[2], "strncpy pad zero");
+
+        Assert.assertEquals(4, StringFuncs.strcat(dst, "xy"), "strcat return");
+        Assert.assertEquals('x', dst[2], "strcat dst[2]");
+        Assert.assertEquals(0, dst[4], "strcat terminator");
+
+        Assert.assertEquals(6, StringFuncs.strncat(dst, "zzz", 2), "strncat return");
+        Assert.assertEquals('z', dst[4], "strncat dst[4]");
+        Assert.assertEquals(0, dst[6], "strncat terminator");
+    }
+
     public static int run() {
         failures = 0;
         System.out.println("== StringFuncsTest ==");
@@ -374,8 +450,12 @@ public final class StringFuncsTest {
         check(StringFuncsTest::testRawmemchr);
         check(StringFuncsTest::testMemmem);
         check(StringFuncsTest::testStrCasestr);
+        check(StringFuncsTest::testStrCasestrRandom);
         check(StringFuncsTest::testStrverscmp);
         check(StringFuncsTest::testStpcpy);
+        check(StringFuncsTest::testMemccpy);
+        check(StringFuncsTest::testMemccpyRandom);
+        check(StringFuncsTest::testStrcpyCat);
         System.out.println("  " + (failures == 0 ? "PASS" : failures + " FAILURE(S)"));
         return failures;
     }

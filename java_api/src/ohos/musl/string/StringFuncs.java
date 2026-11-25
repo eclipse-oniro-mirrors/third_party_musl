@@ -739,4 +739,117 @@ public final class StringFuncs {
         }
         return copy;
     }
+
+    /**
+     * {@code void *memccpy(void *dest, const void *src, int c, size_t n)}：从
+     * {@code src} 复制到 {@code dest}，直到复制满 {@code n} 字节或复制到
+     * {@code (unsigned char)c}（含该字节）为止。C 返回目标中 {@code c} 之后的字节指针
+     * （即下标 {@code i + 1}）；未找到（NULL）返回 -1。移植 musl {@code memccpy}。
+     *
+     * @param dst 目标字节数组
+     * @param src 源字节数组
+     * @param c 终止字节（仅低 8 位有效）
+     * @param n 最多复制的字节数（需不超过数组长度）
+     * @return 终止字节之后的下标，未找到返回 -1
+     */
+    public static int memccpy(byte[] dst, byte[] src, int c, int n) {
+        int target = c & 0xFF;
+        for (int i = 0; i < n; i++) {
+            dst[i] = src[i];
+            if ((src[i] & 0xFF) == target) {
+                return i + 1;
+            }
+        }
+        return -1;
+    }
+
+    // ------------------------------------------------------------------
+    // 字符串复制 / 拼接（char[] 缓冲）：strcpy / strncpy / strcat / strncat
+    // ------------------------------------------------------------------
+
+    /**
+     * {@code char *strcpy(char *dst, const char *src)}：将 {@code src} 复制到
+     * {@code dst}（C 中连同结尾 NUL），返回 C 中指向 {@code dst} 的指针；Java 版返回
+     * 已复制长度 {@code src.length()}。调用方需保证 {@code dst} 足够长。
+     *
+     * @param dst 目标字符数组
+     * @param src 源字符串
+     * @return 复制的字符数（C 的起始指针映射为结尾下标）
+     */
+    public static int strcpy(char[] dst, String src) {
+        int n = src.length();
+        for (int i = 0; i < n; i++) {
+            dst[i] = src.charAt(i);
+        }
+        dst[n] = 0;
+        return n;
+    }
+
+    /**
+     * {@code char *strncpy(char *dst, const char *src, size_t n)}：至多复制 {@code n}
+     * 个字符；{@code src} 不足 {@code n} 时以 0 填充，与 C 一致。Java 版返回
+     * {@code min(src.length(), n)}。
+     *
+     * @param dst 目标字符数组
+     * @param src 源字符串
+     * @param n 最多复制的字符数（需不超过 {@code dst} 长度）
+     * @return 已写入的字符数
+     */
+    public static int strncpy(char[] dst, String src, int n) {
+        int copy = Math.min(src.length(), n);
+        for (int i = 0; i < copy; i++) {
+            dst[i] = src.charAt(i);
+        }
+        for (int i = copy; i < n; i++) {
+            dst[i] = 0;
+        }
+        return copy;
+    }
+
+    /**
+     * {@code char *strcat(char *dst, const char *src)}：将 {@code src} 追加到
+     * {@code dst} 中首个 0 字符之后（C 中连同结尾 NUL），返回 C 中指向 {@code dst} 的
+     * 指针；Java 版返回追加后的总长度。
+     *
+     * @param dst 目标字符数组（含 0 结尾的内容）
+     * @param src 追加的字符串
+     * @return 追加后的总字符数
+     */
+    public static int strcat(char[] dst, String src) {
+        int k = firstZero(dst);
+        for (int i = 0; i < src.length(); i++) {
+            dst[k + i] = src.charAt(i);
+        }
+        dst[k + src.length()] = 0;
+        return k + src.length();
+    }
+
+    /**
+     * {@code char *strncat(char *dst, const char *src, size_t n)}：将 {@code src} 至多
+     * {@code n} 个字符追加到 {@code dst}，并始终写入结尾 0 字符。Java 版返回追加后的
+     * 总长度。
+     *
+     * @param dst 目标字符数组（含 0 结尾的内容）
+     * @param src 追加的字符串
+     * @param n 最多追加的字符数
+     * @return 追加后的总字符数
+     */
+    public static int strncat(char[] dst, String src, int n) {
+        int k = firstZero(dst);
+        int copy = Math.min(src.length(), n);
+        for (int i = 0; i < copy; i++) {
+            dst[k + i] = src.charAt(i);
+        }
+        dst[k + copy] = 0;
+        return k + copy;
+    }
+
+    private static int firstZero(char[] a) {
+        for (int i = 0; i < a.length; i++) {
+            if (a[i] == 0) {
+                return i;
+            }
+        }
+        return a.length;
+    }
 }

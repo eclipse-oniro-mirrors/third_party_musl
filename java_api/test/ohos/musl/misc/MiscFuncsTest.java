@@ -46,10 +46,23 @@ public final class MiscFuncsTest {
         Assert.assertEquals(32, MiscFuncs.ffs(0x80000000), "ffs(0x80000000)");
     }
 
+    private static void testFfsl() {
+        Assert.assertEquals(0, MiscFuncs.ffsl(0L), "ffsl(0)");
+        Assert.assertEquals(1, MiscFuncs.ffsl(1L), "ffsl(1)");
+        Assert.assertEquals(2, MiscFuncs.ffsl(2L), "ffsl(2)");
+        Assert.assertEquals(3, MiscFuncs.ffsl(4L), "ffsl(4)");
+        Assert.assertEquals(5, MiscFuncs.ffsl(0x10L), "ffsl(0x10)");
+        Assert.assertEquals(64, MiscFuncs.ffsl(Long.MIN_VALUE), "ffsl(Long.MIN_VALUE)");
+        Assert.assertEquals(0, MiscFuncs.ffsll(0L), "ffsll(0)");
+        Assert.assertEquals(1, MiscFuncs.ffsll(3L), "ffsll(3)");
+        Assert.assertEquals(64, MiscFuncs.ffsll(Long.MIN_VALUE), "ffsll(Long.MIN_VALUE)");
+    }
+
     public static int run() {
         failures = 0;
         System.out.println("== MiscFuncsTest ==");
         check(MiscFuncsTest::testFfs);
+        check(MiscFuncsTest::testFfsl);
         System.out.println("  " + (failures == 0 ? "PASS" : failures + " FAILURE(S)"));
         return failures;
     }

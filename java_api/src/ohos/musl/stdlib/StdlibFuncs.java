@@ -277,6 +277,18 @@ public final class StdlibFuncs {
     }
 
     /**
+     * {@code float strtof(const char *s, char **end)}：解析 {@code float}，规则同
+     * {@link #strtod(String)}。Java 以 {@code (float) strtod(s)} 实现（先按 double 解析
+     * 再收窄，两次舍入与 C 的单次舍入存在极微小差异）。
+     *
+     * @param s 待解析字符串
+     * @return 解析得到的 {@code float}
+     */
+    public static float strtof(String s) {
+        return (float) strtod(s);
+    }
+
+    /**
      * {@code long strtol(const char *s, char **end, int base)}：按 {@code base} 进制
      * 解析字符串开头的整数，Java 版省略 end 指针，仅返回数值。
      *
@@ -351,6 +363,19 @@ public final class StdlibFuncs {
      */
     public static long strtoull(String s, int base) {
         return strtoul(s, base);
+    }
+
+    /**
+     * {@code long long strtoll(const char *s, char **end, int base)}：{@code long long}
+     * 版本的 {@link #strtol(String, int)}。C 的 {@code long long} 与本项目目标
+     * {@code long} 同为 64 位，故复用 {@link #strtol(String, int)}。
+     *
+     * @param s 待解析字符串
+     * @param base 进制（0 表示自动检测，或 2..36）
+     * @return 解析得到的 {@code long}
+     */
+    public static long strtoll(String s, int base) {
+        return strtol(s, base);
     }
 
     // ------------------------------------------------------------------

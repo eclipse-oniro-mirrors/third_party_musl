@@ -75,6 +75,22 @@ public final class WcharFuncsTest {
         Assert.assertEquals(-1, WcharFuncs.wcsrchr("abc", 'x'), "wcsrchr absent");
     }
 
+    private static void testWcschrnul() {
+        Assert.assertEquals(2, WcharFuncs.wcschrnul("abca", 'c'), "wcschrnul found");
+        Assert.assertEquals(4, WcharFuncs.wcschrnul("abca", 'x'), "wcschrnul absent -> len");
+        Assert.assertEquals(4, WcharFuncs.wcschrnul("abca", 0), "wcschrnul NUL -> len");
+    }
+
+    private static void testWcscasecmp() {
+        Assert.assertEquals(0, WcharFuncs.wcscasecmp("AbC", "aBc"), "wcscasecmp equal");
+        Assert.assertTrue(WcharFuncs.wcscasecmp("abc", "abd") < 0, "wcscasecmp less");
+        Assert.assertTrue(WcharFuncs.wcscasecmp("abd", "abc") > 0, "wcscasecmp greater");
+        Assert.assertTrue(WcharFuncs.wcscasecmp("a", "B") < 0, "wcscasecmp fold diff");
+        Assert.assertEquals(0, WcharFuncs.wcsncasecmp("AbC", "aBd", 2), "wcsncasecmp n=2");
+        Assert.assertTrue(WcharFuncs.wcsncasecmp("AbC", "aBd", 3) < 0, "wcsncasecmp n=3");
+        Assert.assertEquals(0, WcharFuncs.wcsncasecmp("AbC", "aBd", 0), "wcsncasecmp n=0");
+    }
+
     private static void testWcspbrk() {
         Assert.assertEquals(1, WcharFuncs.wcspbrk("hello", "aeiou"), "wcspbrk e");
         Assert.assertEquals(-1, WcharFuncs.wcspbrk("hello", "xyz"), "wcspbrk absent");
@@ -109,6 +125,52 @@ public final class WcharFuncsTest {
         Assert.assertEquals(0, pad[3], "wmemset pad[3] untouched");
     }
 
+    private static void testWcscpyCat() {
+        char[] dst = new char[10];
+        Assert.assertEquals(3, WcharFuncs.wcscpy(dst, "abc"), "wcscpy return");
+        Assert.assertEquals('a', dst[0], "wcscpy dst[0]");
+        Assert.assertEquals(0, dst[3], "wcscpy terminator");
+
+        Assert.assertEquals(3, WcharFuncs.wcsncpy(dst, "abcde", 3), "wcsncpy truncate");
+        Assert.assertEquals(2, WcharFuncs.wcsncpy(dst, "ab", 5), "wcsncpy pad return");
+        Assert.assertEquals(0, dst[2], "wcsncpy pad zero");
+
+        Assert.assertEquals(4, WcharFuncs.wcscat(dst, "xy"), "wcscat return");
+        Assert.assertEquals('x', dst[2], "wcscat dst[2]");
+        Assert.assertEquals(0, dst[4], "wcscat terminator");
+
+        Assert.assertEquals(6, WcharFuncs.wcsncat(dst, "zzz", 2), "wcsncat return");
+        Assert.assertEquals('z', dst[4], "wcsncat dst[4]");
+        Assert.assertEquals(0, dst[6], "wcsncat terminator");
+    }
+
+    private static void testWcstox() {
+        Assert.assertEquals(42L, WcharFuncs.wcstol("42", 10), "wcstol 42");
+        Assert.assertEquals(-42L, WcharFuncs.wcstol("-42", 10), "wcstol -42");
+        Assert.assertEquals(26L, WcharFuncs.wcstol("0x1A", 0), "wcstol hex");
+        Assert.assertEquals(42L, WcharFuncs.wcstoul("42", 10), "wcstoul 42");
+        Assert.assertEquals(-1L, WcharFuncs.wcstoul("18446744073709551616", 10), "wcstoul overflow");
+        Assert.assertEquals(-42L, WcharFuncs.wcstoll("-42", 10), "wcstoll -42");
+        Assert.assertEquals(-42L, WcharFuncs.wcstoull("-42", 10), "wcstoull wrap");
+        Assert.assertEquals(3.14, WcharFuncs.wcstod("3.14"), 1e-12, "wcstod 3.14");
+        Assert.assertEquals(Double.POSITIVE_INFINITY, WcharFuncs.wcstod("inf"), 1e-12, "wcstod inf");
+        Assert.assertEquals(3.14f, WcharFuncs.wcstof("3.14"), 1e-5f, "wcstof 3.14");
+        Assert.assertEquals(8.0f, WcharFuncs.wcstof("0x1p3"), 1e-6f, "wcstof hex");
+        Assert.assertEquals(3.14, WcharFuncs.wcstold("3.14"), 1e-12, "wcstold 3.14");
+        Assert.assertEquals(-250.0, WcharFuncs.wcstold("-2.5e2"), 1e-12, "wcstold exp");
+    }
+
+    private static void testBtowcWctob() {
+        Assert.assertEquals('a', WcharFuncs.btowc('a'), "btowc('a')");
+        Assert.assertEquals(0xFF, WcharFuncs.btowc(0xFF), "btowc(0xFF)");
+        Assert.assertEquals(-1, WcharFuncs.btowc(-1), "btowc(EOF)");
+        Assert.assertEquals(-1, WcharFuncs.btowc(0x100), "btowc(0x100)");
+        Assert.assertEquals('a', WcharFuncs.wctob('a'), "wctob('a')");
+        Assert.assertEquals(0x7F, WcharFuncs.wctob(0x7F), "wctob(0x7F)");
+        Assert.assertEquals(-1, WcharFuncs.wctob(0x100), "wctob(0x100) -> EOF");
+        Assert.assertEquals(-1, WcharFuncs.wctob(-1), "wctob(-1) -> EOF");
+    }
+
     public static int run() {
         failures = 0;
         System.out.println("== WcharFuncsTest ==");
@@ -117,7 +179,12 @@ public final class WcharFuncsTest {
         check(WcharFuncsTest::testWmemcmp);
         check(WcharFuncsTest::testWcschr);
         check(WcharFuncsTest::testWcspbrk);
+        check(WcharFuncsTest::testWcschrnul);
+        check(WcharFuncsTest::testWcscasecmp);
         check(WcharFuncsTest::testWmemops);
+        check(WcharFuncsTest::testWcscpyCat);
+        check(WcharFuncsTest::testWcstox);
+        check(WcharFuncsTest::testBtowcWctob);
         System.out.println("  " + (failures == 0 ? "PASS" : failures + " FAILURE(S)"));
         return failures;
     }
