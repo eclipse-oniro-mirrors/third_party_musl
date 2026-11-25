@@ -624,4 +624,119 @@ public final class StringFuncs {
         }
         return true;
     }
+
+    // ------------------------------------------------------------------
+    // 其他 GNU 扩展：strcasestr / strverscmp / stpcpy / stpncpy
+    // ------------------------------------------------------------------
+
+    /**
+     * {@code char *strcasestr(const char *h, const char *n)}（GNU 扩展）：忽略 ASCII
+     * 大小写地在 {@code h} 中查找子串 {@code n} 的首次出现，返回下标；空 {@code n}
+     * 返回 0；未找到（NULL）返回 -1。移植 musl：在每个位置调用
+     * {@code strncasecmp(h+i, n, len(n))}。
+     *
+     * @param h 主串
+     * @param n 子串
+     * @return 首次出现下标，未找到返回 -1
+     */
+    public static int strcasestr(String h, String n) {
+        int l = n.length();
+        for (int i = 0; i + l <= h.length(); i++) {
+            if (strncasecmp(h.substring(i, i + l), n, l) == 0) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * {@code int strverscmp(const char *l, const char *r)}（GNU 扩展）：自然顺序版本
+     * 比较（数字段按数值而非字典序）。移植 musl {@code strverscmp}：先找最长公共前缀
+     * 并跟踪其中最后一串数字是否全零；若两串在非零数字串处首次不同，则数字串更长者
+     * 更大；若公共数字段全零，则数字顺序小于非数字。
+     *
+     * @param l0 左操作数
+     * @param r0 右操作数
+     * @return 负 / 0 / 正
+     */
+    public static int strverscmp(String l0, String r0) {
+        int i = 0;
+        int dp = 0;
+        boolean z = true;
+        while (true) {
+            int a = i < l0.length() ? l0.charAt(i) : 0;
+            int b = i < r0.length() ? r0.charAt(i) : 0;
+            if (a != b) {
+                break;
+            }
+            if (a == 0) {
+                return 0;
+            }
+            if (!CtypeFuncs.isdigit(a)) {
+                dp = i + 1;
+                z = true;
+            } else if (a != '0') {
+                z = false;
+            }
+            i++;
+        }
+        int lc = i < l0.length() ? l0.charAt(i) : 0;
+        int rc = i < r0.length() ? r0.charAt(i) : 0;
+        int ldc = dp < l0.length() ? l0.charAt(dp) : 0;
+        int rdc = dp < r0.length() ? r0.charAt(dp) : 0;
+        if (ldc >= '1' && ldc <= '9' && rdc >= '1' && rdc <= '9') {
+            int j = i;
+            while (j < l0.length() && CtypeFuncs.isdigit(l0.charAt(j))) {
+                if (j >= r0.length() || !CtypeFuncs.isdigit(r0.charAt(j))) {
+                    return 1;
+                }
+                j++;
+            }
+            if (j < r0.length() && CtypeFuncs.isdigit(r0.charAt(j))) {
+                return -1;
+            }
+        } else if (z && dp < i && (CtypeFuncs.isdigit(lc) || CtypeFuncs.isdigit(rc))) {
+            return (lc - '0') - (rc - '0');
+        }
+        return lc - rc;
+    }
+
+    /**
+     * {@code char *stpcpy(char *dst, const char *src)}：将 {@code src} 复制到字符数组
+     * {@code dst}（C 中连同结尾 NUL），返回 C 中指向结尾 NUL 的指针；Java 版返回已复制
+     * 长度 {@code src.length()}。调用方需保证 {@code dst} 足够长。
+     *
+     * @param dst 目标字符数组
+     * @param src 源字符串
+     * @return 复制的字符数（C 的结尾指针下标）
+     */
+    public static int stpcpy(char[] dst, String src) {
+        int n = src.length();
+        for (int i = 0; i < n; i++) {
+            dst[i] = src.charAt(i);
+        }
+        return n;
+    }
+
+    /**
+     * {@code char *stpncpy(char *dst, const char *src, size_t n)}：至多复制 {@code n}
+     * 个字符；{@code src} 不足 {@code n} 时以 {@code '\0'}（char 0）填充剩余位，与 C
+     * 一致。返回 C 中指向首个写入的 NUL 的指针；Java 版返回
+     * {@code min(src.length(), n)}。
+     *
+     * @param dst 目标字符数组
+     * @param src 源字符串
+     * @param n 最多复制的字符数（需不超过 {@code dst} 长度）
+     * @return 已写入的字符数（{@code min(src.length(), n)}）
+     */
+    public static int stpncpy(char[] dst, String src, int n) {
+        int copy = Math.min(src.length(), n);
+        for (int i = 0; i < copy; i++) {
+            dst[i] = src.charAt(i);
+        }
+        for (int i = copy; i < n; i++) {
+            dst[i] = 0;
+        }
+        return copy;
+    }
 }

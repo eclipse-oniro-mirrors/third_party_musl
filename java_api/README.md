@@ -27,9 +27,9 @@ C → Java 接口转换的探索与演示。
 
 因此规避了 `malloc`/`free`、`open`/`read`/`write`、`printf`、`errno` 等不适合直接映射的接口。
 
-## 接口清单与映射（共 72 个）
+## 接口清单与映射（共 123 个）
 
-### StringFuncs —— `<string.h>` / `<strings.h>`（21 个）
+### StringFuncs —— `<string.h>` / `<strings.h>`（25 个）
 
 | C 接口 | 头文件 | Java 方法 | 返回类型映射 |
 |---|---|---|---|
@@ -54,6 +54,10 @@ C → Java 接口转换的探索与演示。
 | `void *memmem(const void *, size_t, const void *, size_t)` | string.h | `memmem(byte[], int, byte[], int)` | 指针 → 下标，`NULL` → `-1` |
 | `void *memrchr(const void *, int, size_t)` | string.h | `memrchr(byte[], int, int)` | 指针 → 下标，`NULL` → `-1` |
 | `void *rawmemchr(const void *, int)` | string.h | `rawmemchr(byte[], int)` | 指针 → 下标，未找到 → `-1` |
+| `char *strcasestr(const char *, const char *)` | string.h | `strcasestr(String, String)` | 指针 → 下标，`NULL` → `-1`（忽略 ASCII 大小写） |
+| `int strverscmp(const char *, const char *)` | string.h | `strverscmp(String, String)` | `int`（自然顺序版本比较） |
+| `char *stpcpy(char *, const char *)` | string.h | `stpcpy(char[], String)` | 指针 → 已复制长度（`int`） |
+| `char *stpncpy(char *, const char *, size_t)` | string.h | `stpncpy(char[], String, int)` | 指针 → `min(len, n)`；不足 `n` 以 char 0 填充 |
 
 ### CtypeFuncs —— `<ctype.h>`（16 个）
 
@@ -108,7 +112,7 @@ C → Java 接口转换的探索与演示。
 |---|---|---|
 | `int fnmatch(const char *, const char *, int)` | `fnmatch(String, String, int)` | `0`/`FNM_NOMATCH` → `boolean`，`FNM_*` 常量定义于 `RegexFuncs` |
 
-### MathFuncs —— `<math.h>`（18 个）
+### MathFuncs —— `<math.h>`（50 个）
 
 | C 接口 | Java 方法 | 返回类型映射 |
 |---|---|---|
@@ -128,8 +132,60 @@ C → Java 接口转换的探索与演示。
 | `double log(double)` | `log(double)` | `double` |
 | `double log10(double)` | `log10(double)` | `double` |
 | `double sinh(double)` | `sinh(double)` | `double` |
+| `double log2(double)` | `log2(double)` | `double` |
+| `double fmod(double, double)` | `fmod(double, double)` | `double`（Java `%` 即 C99 fmod） |
+| `double remainder(double, double)` | `remainder(double, double)` | `double`（`Math.IEEEremainder`） |
+| `double fmin(double, double)` | `fmin(double, double)` | `double` |
+| `double fmax(double, double)` | `fmax(double, double)` | `double` |
+| `double copysign(double, double)` | `copysign(double, double)` | `double` |
+| `double round(double)` | `round(double)` | `double`（half-away-from-zero） |
+| `double trunc(double)` | `trunc(double)` | `double` |
 | `double cbrt(double)` | `cbrt(double)` | `double` |
 | `double hypot(double, double)` | `hypot(double, double)` | `double` |
+| `double expm1(double)` | `expm1(double)` | `double`（`Math.expm1`） |
+| `double log1p(double)` | `log1p(double)` | `double`（`Math.log1p`） |
+| `double exp2(double)` | `exp2(double)` | `double`（`pow(2.0, x)`） |
+| `double rint(double)` | `rint(double)` | `double`（`Math.rint`，平局取偶） |
+| `long lrint(double)` | `lrint(double)` | `double` → `long`（截断） |
+| `long long llrint(double)` | `llrint(double)` | 复用 `lrint` |
+| `long lround(double)` | `lround(double)` | `double` → `long`（half-away-from-zero） |
+| `long long llround(double)` | `llround(double)` | 复用 `lround` |
+| `double frexp(double, int *)` | `frexp(double)` | 出参 → 嵌套类 `Frexp {mantissa, exp}` |
+| `double ldexp(double, int)` | `ldexp(double, int)` | `double`（`Math.scalb`） |
+| `double modf(double, double *)` | `modf(double)` | 出参 → 嵌套类 `Modf {frac, integral}` |
+| `double scalbn(double, int)` | `scalbn(double, int)` | `double`（`Math.scalb`） |
+| `int ilogb(double)` | `ilogb(double)` | `int`；0→`INT_MIN`，NaN/inf→`INT_MAX` |
+| `double logb(double)` | `logb(double)` | `double`；0→`-inf`，inf→`+inf` |
+| `double nextafter(double, double)` | `nextafter(double, double)` | `double`（`Math.nextAfter`） |
+| `double nextUp(double)` | `nextUp(double)` | `double`（`Math.nextUp`） |
+| `double nextDown(double)` | `nextDown(double)` | `double`（`Math.nextDown`） |
+| `double fdim(double, double)` | `fdim(double, double)` | `double`（正差） |
+| `double fma(double, double, double)` | `fma(double, double, double)` | `double`（`Math.fma`，融合乘加） |
+| `int isnan(double)` | `isnan(double)` | 0/非0 → `boolean` |
+| `int isinf(double)` | `isinf(double)` | 0/非0 → `boolean` |
+| `int isfinite(double)` | `isfinite(double)` | 0/非0 → `boolean` |
+| `int isnormal(double)` | `isnormal(double)` | 0/非0 → `boolean` |
+| `int signbit(double)` | `signbit(double)` | 0/非0 → `boolean`（符号位判断） |
+
+### WcharFuncs —— `<wchar.h>`（15 个，对齐 musl `src/wchar/`）
+
+| C 接口 | Java 方法 | 返回类型映射 |
+|---|---|---|
+| `size_t wcslen(const wchar_t *)` | `wcslen(String)` | `size_t` → `int` |
+| `size_t wcsnlen(const wchar_t *, size_t)` | `wcsnlen(String, int)` | `size_t` → `int` |
+| `int wcscmp(const wchar_t *, const wchar_t *)` | `wcscmp(String, String)` | `int` |
+| `int wcsncmp(const wchar_t *, const wchar_t *, size_t)` | `wcsncmp(String, String, int)` | `int` |
+| `int wmemcmp(const wchar_t *, const wchar_t *, size_t)` | `wmemcmp(char[], char[], int)` | `int` |
+| `wchar_t *wcschr(const wchar_t *, wchar_t)` | `wcschr(String, int)` | 指针 → 下标，`NULL` → `-1`；`c==0` → `len` |
+| `wchar_t *wcsrchr(const wchar_t *, wchar_t)` | `wcsrchr(String, int)` | 指针 → 下标，`NULL` → `-1`；`c==0` → `len` |
+| `wchar_t *wcspbrk(const wchar_t *, const wchar_t *)` | `wcspbrk(String, String)` | 指针 → 下标，`NULL` → `-1` |
+| `size_t wcsspn(const wchar_t *, const wchar_t *)` | `wcsspn(String, String)` | `size_t` → `int` |
+| `size_t wcscspn(const wchar_t *, const wchar_t *)` | `wcscspn(String, String)` | `size_t` → `int` |
+| `wchar_t *wcsstr(const wchar_t *, const wchar_t *)` | `wcsstr(String, String)` | 指针 → 下标，`NULL` → `-1` |
+| `wchar_t *wmemchr(const wchar_t *, wchar_t, size_t)` | `wmemchr(char[], int, int)` | 指针 → 下标，`NULL` → `-1` |
+| `wchar_t *wmemcpy(wchar_t *, const wchar_t *, size_t)` | `wmemcpy(char[], char[], int)` | `void*` 返回值省略 → `void` |
+| `wchar_t *wmemmove(wchar_t *, const wchar_t *, size_t)` | `wmemmove(char[], char[], int)` | `void*` 返回值省略 → `void` |
+| `wchar_t *wmemset(wchar_t *, wchar_t, size_t)` | `wmemset(char[], int, int)` | `void*` 返回值省略 → `void` |
 
 ## 关键语义差异
 
@@ -154,6 +210,21 @@ C → Java 接口转换的探索与演示。
 | `memrchr/rawmemchr` 未找到 | `memrchr` 返回 `NULL`；`rawmemchr` 未找到为未定义行为 | 均返回 `-1`；`rawmemchr` 省略长度参数，查找整个数组 |
 | `fnmatch` 类别 | `[[:alpha:]]` 依赖 locale，未完全支持 | 字符类 `[...]` 支持范围/取反/转义，但未实现 POSIX 字符类 `[[:alpha:]]` |
 | `memcpy/memmove/memset` 返回值 | 返回目标指针（便于链式调用） | 省略 `void*` 返回值，方法返回 `void` |
+| `round` 舍入 | C99 half-away-from-zero（负半值远离零） | `Math.round` 不符（负半值向 `+inf`）；以 `copySign(floor(|x|+0.5), x)` 复刻 |
+| `fmod/remainder` | `fmod` 符号随被除数；`remainder` 为 IEEE 754 余数（商取最近整数、平局取偶） | Java `%` 即 `fmod`；`Math.IEEEremainder` 即 `remainder` |
+| `fmin/fmax` NaN/±0 | 任一为 NaN 返回另一值；`fmin(+0,-0)=-0`、`fmax(-0,+0)=+0` | 需先判 NaN 再委托 `Math.min/max`（后者 NaN 语义不同） |
+| `copysign` NaN 符号 | 位操作，符号取 NaN 载荷的符号位 | `Math.copySign` 对 NaN 符号约定为正 |
+| `log2` 精度 | musl 精确舍入 | `Math.log(x)/Math.log(2)` 近似值 |
+| `expm1/log1p` 精度 | musl 高精度实现 | 委托 `Math.expm1/Math.log1p` |
+| `exp2` | 专用实现 | `pow(2.0, x)` |
+| `lrint/lround` 超范围 | 未定义行为 | Java `(long)` 截断回绕 |
+| `frexp/modf` 出参 | 通过指针出参返回 | 返回嵌套类 `Frexp`/`Modf` |
+| `ilogb/logb` 特殊值 | `ilogb(0)=FP_ILOGB0`、`ilogb(NaN/inf)=FP_ILOGBNAN`；`logb(0)=-inf` | 0→`Integer.MIN_VALUE`，NaN/inf→`Integer.MAX_VALUE`；`logb` 用 -inf/NaN/+inf |
+| `isnan/isinf/isfinite/isnormal/signbit` | 返回 0 / 非 0 的 `int` | 返回 `boolean`；`signbit` 以符号位判断 |
+| `strverscmp` 排序 | 数字段按数值比较（自然排序） | 移植 musl `strverscmp` 算法 |
+| `stpcpy/stpncpy` 返回 | 返回目标指针（指向结尾 NUL / `dst+n`） | 返回写入长度 `int`；`stpncpy` 不足 `n` 以 char 0 填充 |
+| `wchar_t` 宽度 | Linux 上为 32 位码点 | Java `char` 为 16 位 UTF-16 码元，增补平面为代理对（语义差异） |
+| `wmemchr/wmemcpy/wmemmove/wmemset` | 操作 `wchar_t *` | 操作 `char[]`（UTF-16 码元数组） |
 | `ffs(i)` 语义 | 最低置位位编号（1..N），`i==0` → 0 | `Integer.numberOfTrailingZeros(i)+1`，`i==0` → 0 |
 
 ## 目录结构
@@ -165,12 +236,13 @@ C → Java 接口转换的探索与演示。
 java_api/
 ├── README.md
 ├── src/ohos/musl/                  # 主代码（按类型子目录，仿 musl src/）
-│   ├── string/StringFuncs.java     # ohos.musl.string  string.h / strings.h（21 个）
+│   ├── string/StringFuncs.java     # ohos.musl.string  string.h / strings.h（25 个）
 │   ├── ctype/CtypeFuncs.java       # ohos.musl.ctype   ctype.h（16 个）
 │   ├── misc/MiscFuncs.java         # ohos.musl.misc    strings.h：ffs（1 个，对齐 musl src/misc/）
 │   ├── stdlib/StdlibFuncs.java     # ohos.musl.stdlib  stdlib.h（15 个）
 │   ├── regex/RegexFuncs.java       # ohos.musl.regex   fnmatch.h（1 个，对齐 musl src/regex/）
-│   ├── math/MathFuncs.java         # ohos.musl.math    math.h（18 个）
+│   ├── math/MathFuncs.java         # ohos.musl.math    math.h（50 个）
+│   ├── wchar/WcharFuncs.java       # ohos.musl.wchar   wchar.h（15 个，对齐 musl src/wchar/）
 │   └── MuslDemo.java               # ohos.musl         演示入口
 └── test/ohos/musl/                 # 测试（单独目录，按类型子目录）
     ├── Assert.java                 # ohos.musl         无依赖断言工具
@@ -180,7 +252,8 @@ java_api/
     ├── misc/MiscFuncsTest.java     # ohos.musl.misc
     ├── stdlib/StdlibFuncsTest.java # ohos.musl.stdlib
     ├── regex/RegexFuncsTest.java   # ohos.musl.regex
-    └── math/MathFuncsTest.java     # ohos.musl.math
+    ├── math/MathFuncsTest.java     # ohos.musl.math
+    └── wchar/WcharFuncsTest.java   # ohos.musl.wchar
 ```
 
 ## 编译与运行（独立于现有构建）
@@ -209,6 +282,8 @@ java -cp out ohos.musl.TestRunner # 测试（全部通过时退出码为 0）
 == StdlibFuncsTest ==
   PASS
 == MathFuncsTest ==
+  PASS
+== WcharFuncsTest ==
   PASS
 
 ALL TESTS PASSED

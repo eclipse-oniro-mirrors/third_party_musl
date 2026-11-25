@@ -19,6 +19,7 @@ import ohos.musl.ctype.CtypeFuncs;
 import ohos.musl.math.MathFuncs;
 import ohos.musl.stdlib.StdlibFuncs;
 import ohos.musl.string.StringFuncs;
+import ohos.musl.wchar.WcharFuncs;
 
 /**
  * 演示 30 个 C 接口的 Java 版本（节选）。独立于现有编译流程：
@@ -64,6 +65,18 @@ public final class MuslDemo {
         System.out.println("pow(2.0,10.0)            = " + MathFuncs.pow(2.0, 10.0));
         System.out.println("floor(-3.7)              = " + MathFuncs.floor(-3.7));
         System.out.println("fabs(-3.5)               = " + MathFuncs.fabs(-3.5));
+        System.out.println("lround(-2.5)             = " + MathFuncs.lround(-2.5));
+        System.out.println("frexp(8.0)               = m " + MathFuncs.frexp(8.0).mantissa
+                + ", e " + MathFuncs.frexp(8.0).exp);
+        System.out.println("signbit(-0.0)            = " + MathFuncs.signbit(-0.0));
+
+        // wchar.h（UTF-16 码元）
+        System.out.println("wcslen(\"hello\")          = " + WcharFuncs.wcslen("hello"));
+        System.out.println("wcschr(\"hello\",'l')      = " + WcharFuncs.wcschr("hello", 'l'));
+
+        // string.h GNU 扩展
+        System.out.println("strverscmp(\"file10\",\"file2\") = "
+                + StringFuncs.strverscmp("file10", "file2"));
 
         // ctype.h
         System.out.println("isdigit('7')             = " + CtypeFuncs.isdigit('7'));
