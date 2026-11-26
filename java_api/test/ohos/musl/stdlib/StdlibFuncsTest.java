@@ -283,6 +283,63 @@ public final class StdlibFuncsTest {
         Assert.assertEquals(-42L, StdlibFuncs.strtoull("-42", 10), "strtoull -42 wrap");
     }
 
+    private static void testStrtoll() {
+        Assert.assertEquals(42L, StdlibFuncs.strtoll("42", 10), "strtoll 42");
+        Assert.assertEquals(-42L, StdlibFuncs.strtoll("-42", 10), "strtoll -42");
+        Assert.assertEquals(26L, StdlibFuncs.strtoll("0x1A", 0), "strtoll hex");
+        Assert.assertEquals(Long.MAX_VALUE, StdlibFuncs.strtoll("9223372036854775807", 10), "strtoll MAX");
+        Assert.assertEquals(Long.MIN_VALUE, StdlibFuncs.strtoll("-9223372036854775808", 10), "strtoll MIN");
+        Assert.assertEquals(Long.MAX_VALUE, StdlibFuncs.strtoll("9223372036854775808", 10), "strtoll overflow");
+    }
+
+    private static void testStrtolF() {
+        Assert.assertEquals(0.0f, StdlibFuncs.strtof("0"), 1e-6f, "strtof 0");
+        Assert.assertEquals(3.14f, StdlibFuncs.strtof("3.14"), 1e-5f, "strtof 3.14");
+        Assert.assertEquals(-250.0f, StdlibFuncs.strtof("-2.5e2"), 1e-4f, "strtof exp");
+        Assert.assertEquals(8.0f, StdlibFuncs.strtof("0x1p3"), 1e-6f, "strtof hex");
+        Assert.assertEquals(Float.POSITIVE_INFINITY, StdlibFuncs.strtof("1e39"), 1e-6f, "strtof overflow");
+        Assert.assertEquals(0.0f, StdlibFuncs.strtof(""), 1e-6f, "strtof empty");
+    }
+
+    private static void testBsearchRandom() {
+        java.util.Random rnd = new java.util.Random(20261121);
+        java.util.Comparator<Integer> cmp = java.util.Comparator.naturalOrder();
+        for (int t = 0; t < 300; t++) {
+            int len = rnd.nextInt(20);
+            Integer[] a = new Integer[len];
+            for (int i = 0; i < len; i++) {
+                a[i] = rnd.nextInt(50) - 25;
+            }
+            java.util.Arrays.sort(a);
+            int key = rnd.nextInt(50) - 25;
+            int expected = -1;
+            for (int i = 0; i < len; i++) {
+                if (a[i] == key) {
+                    expected = i;
+                    break;
+                }
+            }
+            int actual = StdlibFuncs.bsearch(key, a, cmp);
+            if (expected >= 0) {
+                Assert.assertEquals(key, a[actual], "bsearch random hit value");
+            } else {
+                Assert.assertEquals(-1, actual, "bsearch random miss");
+            }
+        }
+    }
+
+    private static void testStrtolRandom() {
+        java.util.Random rnd = new java.util.Random(20261122);
+        for (int t = 0; t < 500; t++) {
+            long val = rnd.nextLong();
+            int base = 2 + rnd.nextInt(35);
+            String s = Long.toString(val, base);
+            Assert.assertEquals(val, StdlibFuncs.strtol(s, base), "strtol random base=" + base);
+            // strtoull 对任意 long 值，其无符号位模式即原值
+            Assert.assertEquals(val, StdlibFuncs.strtoull(s, base), "strtoull random base=" + base);
+        }
+    }
+
     public static int run() {
         failures = 0;
         System.out.println("== StdlibFuncsTest ==");
@@ -301,6 +358,10 @@ public final class StdlibFuncsTest {
         check(StdlibFuncsTest::testBsearch);
         check(StdlibFuncsTest::testStrtoul);
         check(StdlibFuncsTest::testStrtoull);
+        check(StdlibFuncsTest::testStrtoll);
+        check(StdlibFuncsTest::testStrtolF);
+        check(StdlibFuncsTest::testBsearchRandom);
+        check(StdlibFuncsTest::testStrtolRandom);
         System.out.println("  " + (failures == 0 ? "PASS" : failures + " FAILURE(S)"));
         return failures;
     }

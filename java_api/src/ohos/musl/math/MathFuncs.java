@@ -657,4 +657,555 @@ public final class MathFuncs {
     public static boolean signbit(double x) {
         return (Double.doubleToLongBits(x) & Long.MIN_VALUE) != 0;
     }
+
+    // ------------------------------------------------------------------
+    // C99 比较宏：isgreater / isgreaterequal / isless / islessequal /
+    // islessgreater / isunordered / fpclassify
+    // ------------------------------------------------------------------
+
+    /** {@code fpclassify} 的返回值：NaN。 */
+    public static final int FP_NAN = 0;
+    /** {@code fpclassify} 的返回值：无穷。 */
+    public static final int FP_INFINITE = 1;
+    /** {@code fpclassify} 的返回值：零。 */
+    public static final int FP_ZERO = 2;
+    /** {@code fpclassify} 的返回值：次正规数。 */
+    public static final int FP_SUBNORMAL = 3;
+    /** {@code fpclassify} 的返回值：正规数。 */
+    public static final int FP_NORMAL = 4;
+
+    /**
+     * {@code int isgreater(x, y)}（math.h 宏）：等价于 {@code x > y}（任一为 NaN 时为
+     * 假），映射为 {@code boolean}。
+     */
+    public static boolean isgreater(double x, double y) {
+        return x > y;
+    }
+
+    /**
+     * {@code int isgreaterequal(x, y)}（math.h 宏）：等价于 {@code x >= y}（任一为 NaN
+     * 时为假），映射为 {@code boolean}。
+     */
+    public static boolean isgreaterequal(double x, double y) {
+        return x >= y;
+    }
+
+    /**
+     * {@code int isless(x, y)}（math.h 宏）：等价于 {@code x < y}（任一为 NaN 时为假），
+     * 映射为 {@code boolean}。
+     */
+    public static boolean isless(double x, double y) {
+        return x < y;
+    }
+
+    /**
+     * {@code int islessequal(x, y)}（math.h 宏）：等价于 {@code x <= y}（任一为 NaN 时
+     * 为假），映射为 {@code boolean}。
+     */
+    public static boolean islessequal(double x, double y) {
+        return x <= y;
+    }
+
+    /**
+     * {@code int islessgreater(x, y)}（math.h 宏）：{@code x < y || x > y}（任一为 NaN
+     * 时为假），映射为 {@code boolean}。
+     */
+    public static boolean islessgreater(double x, double y) {
+        return x < y || x > y;
+    }
+
+    /**
+     * {@code int isunordered(x, y)}（math.h 宏）：任一参数为 NaN 即为真，映射为
+     * {@code boolean}。
+     */
+    public static boolean isunordered(double x, double y) {
+        return Double.isNaN(x) || Double.isNaN(y);
+    }
+
+    /**
+     * {@code int fpclassify(x)}（math.h 宏）：返回 {@code x} 的类别，取值为
+     * {@link #FP_NAN} / {@link #FP_INFINITE} / {@link #FP_ZERO} /
+     * {@link #FP_SUBNORMAL} / {@link #FP_NORMAL} 之一。
+     *
+     * @param x 输入值
+     * @return 分类常量
+     */
+    public static int fpclassify(double x) {
+        if (Double.isNaN(x)) {
+            return FP_NAN;
+        }
+        if (Double.isInfinite(x)) {
+            return FP_INFINITE;
+        }
+        if (x == 0.0) {
+            return FP_ZERO;
+        }
+        if (Math.getExponent(x) == Double.MIN_EXPONENT - 1) {
+            return FP_SUBNORMAL;
+        }
+        return FP_NORMAL;
+    }
+
+    // ------------------------------------------------------------------
+    // scalbln / nan / remquo / exp10
+    // ------------------------------------------------------------------
+
+    /**
+     * {@code double scalbln(double x, long n)}：{@code x * 2^n}，指数为 {@code long}，
+     * 委托 {@link Math#scalb(double, int)}（先钳制到 {@code int} 范围）。
+     *
+     * @param x 尾数
+     * @param n 二进制指数
+     * @return {@code x * 2^n}
+     */
+    public static double scalbln(double x, long n) {
+        int e = (int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, n));
+        return Math.scalb(x, e);
+    }
+
+    /**
+     * {@code double nan(const char *s)}：返回安静的 NaN（忽略字符串载荷，恒返回
+     * {@link Double#NaN}）。
+     *
+     * @param s 载荷字符串（本实现忽略）
+     * @return NaN
+     */
+    public static double nan(String s) {
+        return Double.NaN;
+    }
+
+    /**
+     * Java 版 {@code remquo} 的返回（C 通过出参指针返回商）。{@code quo} 为商的低 3 位
+     * （符号取商），{@code rem} 为 IEEE 754 余数。
+     */
+    public static final class Remquo {
+        /** IEEE 754 余数。 */
+        public final double rem;
+        /** 商的低 3 位（含符号）。 */
+        public final int quo;
+
+        private Remquo(double rem, int quo) {
+            this.rem = rem;
+            this.quo = quo;
+        }
+    }
+
+    /**
+     * {@code double remquo(double x, double y, int *quo)}：返回 IEEE 754 余数（同
+     * {@link #remainder(double, double)}），并计算商的低 3 位（含符号），Java 版以返回
+     * {@link Remquo} 代替出参。
+     *
+     * @param x 被除数
+     * @param y 除数
+     * @return 余数与商的低 3 位
+     */
+    public static Remquo remquo(double x, double y) {
+        double rem = Math.IEEEremainder(x, y);
+        int quo = ((int) Math.round((x - rem) / y)) & 7;
+        return new Remquo(rem, quo);
+    }
+
+    /**
+     * {@code double exp10(double x)}（GNU 扩展）：10 的 {@code x} 次幂，实现为
+     * {@code pow(10.0, x)}。
+     *
+     * @param x 指数
+     * @return {@code 10^x}
+     */
+    public static double exp10(double x) {
+        return Math.pow(10.0, x);
+    }
+
+    // ------------------------------------------------------------------
+    // float 变体（委托 double 实现后收窄，两次舍入与 C 的单次舍入有极微小差异）
+    // ------------------------------------------------------------------
+
+    /** {@code float sqrtf(float x)}：平方根（float）。 */
+    public static float sqrtf(float x) {
+        return (float) Math.sqrt(x);
+    }
+
+    /** {@code float powf(float x, float y)}：幂运算（float）。 */
+    public static float powf(float x, float y) {
+        return (float) Math.pow(x, y);
+    }
+
+    /** {@code float fabsf(float x)}：绝对值（float）。 */
+    public static float fabsf(float x) {
+        return Math.abs(x);
+    }
+
+    /** {@code float floorf(float x)}：向下取整（float）。 */
+    public static float floorf(float x) {
+        return (float) Math.floor(x);
+    }
+
+    /** {@code float ceilf(float x)}：向上取整（float）。 */
+    public static float ceilf(float x) {
+        return (float) Math.ceil(x);
+    }
+
+    /** {@code float fmodf(float x, float y)}：浮点取余（float），符号随被除数。 */
+    public static float fmodf(float x, float y) {
+        return x % y;
+    }
+
+    /** {@code float fminf(float x, float y)}：较小者（float），任一 NaN 返回另一值。 */
+    public static float fminf(float x, float y) {
+        return (float) fmin(x, y);
+    }
+
+    /** {@code float fmaxf(float x, float y)}：较大者（float），任一 NaN 返回另一值。 */
+    public static float fmaxf(float x, float y) {
+        return (float) fmax(x, y);
+    }
+
+    /** {@code float copysignf(float x, float y)}：符号重设（float）。 */
+    public static float copysignf(float x, float y) {
+        return Math.copySign(x, y);
+    }
+
+    /** {@code float hypotf(float x, float y)}：斜边长度（float）。 */
+    public static float hypotf(float x, float y) {
+        return (float) Math.hypot(x, y);
+    }
+
+    /** {@code float cbrtf(float x)}：立方根（float）。 */
+    public static float cbrtf(float x) {
+        return (float) Math.cbrt(x);
+    }
+
+    /** {@code float roundf(float x)}：四舍五入（float，平局远离零）。 */
+    public static float roundf(float x) {
+        return (float) round(x);
+    }
+
+    /** {@code float truncf(float x)}：向零取整（float）。 */
+    public static float truncf(float x) {
+        return (float) trunc(x);
+    }
+
+    /** {@code float expf(float x)}：自然指数（float）。 */
+    public static float expf(float x) {
+        return (float) Math.exp(x);
+    }
+
+    /** {@code float exp2f(float x)}：2 的 {@code x} 次幂（float）。 */
+    public static float exp2f(float x) {
+        return (float) exp2(x);
+    }
+
+    /** {@code float expm1f(float x)}：{@code exp(x)-1}（float）。 */
+    public static float expm1f(float x) {
+        return (float) Math.expm1(x);
+    }
+
+    /** {@code float logf(float x)}：自然对数（float）。 */
+    public static float logf(float x) {
+        return (float) Math.log(x);
+    }
+
+    /** {@code float log2f(float x)}：以 2 为底对数（float）。 */
+    public static float log2f(float x) {
+        return (float) log2(x);
+    }
+
+    /** {@code float log10f(float x)}：常用对数（float）。 */
+    public static float log10f(float x) {
+        return (float) Math.log10(x);
+    }
+
+    /** {@code float log1pf(float x)}：{@code log(1+x)}（float）。 */
+    public static float log1pf(float x) {
+        return (float) Math.log1p(x);
+    }
+
+    /** {@code float sinf(float x)}：正弦（float）。 */
+    public static float sinf(float x) {
+        return (float) Math.sin(x);
+    }
+
+    /** {@code float cosf(float x)}：余弦（float）。 */
+    public static float cosf(float x) {
+        return (float) Math.cos(x);
+    }
+
+    /** {@code float tanf(float x)}：正切（float）。 */
+    public static float tanf(float x) {
+        return (float) Math.tan(x);
+    }
+
+    /** {@code float sinhf(float x)}：双曲正弦（float）。 */
+    public static float sinhf(float x) {
+        return (float) Math.sinh(x);
+    }
+
+    /** {@code float coshf(float x)}：双曲余弦（float）。 */
+    public static float coshf(float x) {
+        return (float) Math.cosh(x);
+    }
+
+    /** {@code float tanhf(float x)}：双曲正切（float）。 */
+    public static float tanhf(float x) {
+        return (float) Math.tanh(x);
+    }
+
+    /** {@code float asinf(float x)}：反正弦（float）。 */
+    public static float asinf(float x) {
+        return (float) Math.asin(x);
+    }
+
+    /** {@code float acosf(float x)}：反余弦（float）。 */
+    public static float acosf(float x) {
+        return (float) Math.acos(x);
+    }
+
+    /** {@code float atanf(float x)}：反正切（float）。 */
+    public static float atanf(float x) {
+        return (float) Math.atan(x);
+    }
+
+    /** {@code float atan2f(float y, float x)}：两参数反正切（float）。 */
+    public static float atan2f(float y, float x) {
+        return (float) Math.atan2(y, x);
+    }
+
+    /** {@code float rintf(float x)}：按当前舍入模式取整（float，平局取偶）。 */
+    public static float rintf(float x) {
+        return (float) Math.rint(x);
+    }
+
+    /** {@code float fdimf(float x, float y)}：正差（float）。 */
+    public static float fdimf(float x, float y) {
+        return (float) fdim(x, y);
+    }
+
+    /** {@code float nextafterf(float x, float y)}：相邻 float 值。 */
+    public static float nextafterf(float x, float y) {
+        return Math.nextAfter(x, y);
+    }
+
+    /** {@code float remainderf(float x, float y)}：IEEE 754 余数（float）。 */
+    public static float remainderf(float x, float y) {
+        return (float) Math.IEEEremainder(x, y);
+    }
+
+    /** {@code float fmaf(float x, float y, float z)}：融合乘加（float）。 */
+    public static float fmaf(float x, float y, float z) {
+        return (float) Math.fma(x, y, z);
+    }
+
+    /** {@code float scalbnf(float x, int n)}：{@code x * 2^n}（float）。 */
+    public static float scalbnf(float x, int n) {
+        return Math.scalb(x, n);
+    }
+
+    /** {@code float ldexpf(float x, int e)}：{@code x * 2^e}（float）。 */
+    public static float ldexpf(float x, int e) {
+        return Math.scalb(x, e);
+    }
+
+    // ------------------------------------------------------------------
+    // 误差函数 / 伽马函数（数值实现）
+    // ------------------------------------------------------------------
+
+    /**
+     * {@code double erf(double x)}：误差函数，采用 Abramowitz &amp; Stegun 7.1.26 近似
+     * （绝对误差约 1.5e-7）。{@code ±0} 保持符号、{@code ±inf} 返回 {@code ±1}、NaN
+     * 返回 NaN。
+     *
+     * @param x 输入值
+     * @return {@code erf(x)}
+     */
+    public static double erf(double x) {
+        if (Double.isNaN(x)) {
+            return Double.NaN;
+        }
+        if (x == 0.0) {
+            return x;
+        }
+        double ax = Math.abs(x);
+        double t = 1.0 / (1.0 + 0.3275911 * ax);
+        double poly = t * (0.254829592 + t * (-0.284496736 + t * (1.421413741
+                + t * (-1.453152027 + t * 1.061405429))));
+        double r = 1.0 - poly * Math.exp(-ax * ax);
+        return x < 0 ? -r : r;
+    }
+
+    /**
+     * {@code double erfc(double x)}：互补误差函数 {@code 1 - erf(x)}。
+     *
+     * @param x 输入值
+     * @return {@code 1 - erf(x)}
+     */
+    public static double erfc(double x) {
+        if (Double.isNaN(x)) {
+            return Double.NaN;
+        }
+        return 1.0 - erf(x);
+    }
+
+    /** Lanczos 近似系数（g = 7，n = 9）。 */
+    private static final double[] LANCZOS = {
+        0.99999999999980993, 676.5203681218851, -1259.1392167224028,
+        771.32342877765313, -176.61502916214059, 12.507343278686905,
+        -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7
+    };
+
+    /**
+     * {@code double tgamma(double x)}：伽马函数。正数用 Lanczos 近似（g = 7，n = 9），
+     * 负数经反射公式 {@code Γ(x) = π / (sin(πx) · Γ(1-x))}；负整数极点返回 NaN、
+     * {@code ±0} 按符号返回 {@code ±inf}。
+     *
+     * @param x 输入值
+     * @return {@code Γ(x)}
+     */
+    public static double tgamma(double x) {
+        if (Double.isNaN(x)) {
+            return Double.NaN;
+        }
+        if (Double.isInfinite(x)) {
+            return x > 0 ? Double.POSITIVE_INFINITY : Double.NaN;
+        }
+        if (x == 0.0) {
+            return 1.0 / x < 0 ? Double.NEGATIVE_INFINITY : Double.POSITIVE_INFINITY;
+        }
+        if (x < 0.0) {
+            if (x == Math.floor(x)) {
+                return Double.NaN;
+            }
+            return Math.PI / (Math.sin(Math.PI * x) * tgamma(1.0 - x));
+        }
+        return lanczosGamma(x);
+    }
+
+    private static double lanczosGamma(double x) {
+        double z = x - 1.0;
+        double a = LANCZOS[0];
+        for (int i = 1; i < LANCZOS.length; i++) {
+            a += LANCZOS[i] / (z + i);
+        }
+        double t = z + 7.5;
+        return Math.sqrt(2.0 * Math.PI) * Math.pow(t, z + 0.5) * Math.exp(-t) * a;
+    }
+
+    /**
+     * {@code double lgamma(double x)}：伽马函数绝对值的自然对数。正数用 Lanczos 求值后
+     * 取对数，负数用反射公式，非正极点（0、负整数）返回 {@code +inf}。
+     *
+     * @param x 输入值
+     * @return {@code log|Γ(x)|}
+     */
+    public static double lgamma(double x) {
+        if (Double.isNaN(x)) {
+            return Double.NaN;
+        }
+        if (x == Double.POSITIVE_INFINITY) {
+            return Double.POSITIVE_INFINITY;
+        }
+        if (x <= 0.0) {
+            if (x == Math.floor(x)) {
+                return Double.POSITIVE_INFINITY;
+            }
+            return Math.log(Math.PI / Math.abs(Math.sin(Math.PI * x))) - lgamma(1.0 - x);
+        }
+        return Math.log(lanczosGamma(x));
+    }
+
+    /** {@code float erff(float x)}：误差函数（float）。 */
+    public static float erff(float x) {
+        return (float) erf(x);
+    }
+
+    /** {@code float erfcf(float x)}：互补误差函数（float）。 */
+    public static float erfcf(float x) {
+        return (float) erfc(x);
+    }
+
+    /** {@code float tgammaf(float x)}：伽马函数（float）。 */
+    public static float tgammaf(float x) {
+        return (float) tgamma(x);
+    }
+
+    /** {@code float lgammaf(float x)}：伽马函数绝对值的对数（float）。 */
+    public static float lgammaf(float x) {
+        return (float) lgamma(x);
+    }
+
+    // ------------------------------------------------------------------
+    // 更多 double / float 接口
+    // ------------------------------------------------------------------
+
+    /**
+     * {@code double nearbyint(double x)}：按当前舍入模式取整（默认平局取偶），同
+     * {@link #rint(double)}，委托 {@link Math#rint(double)}。
+     *
+     * @param x 输入值
+     * @return 取整后的 {@code double}
+     */
+    public static double nearbyint(double x) {
+        return Math.rint(x);
+    }
+
+    /** {@code float nearbyintf(float x)}：按当前舍入模式取整（float）。 */
+    public static float nearbyintf(float x) {
+        return (float) Math.rint(x);
+    }
+
+    /** {@code int ilogbf(float x)}：无偏二进制指数（float），特殊值约定同
+     * {@link #ilogb(double)}。 */
+    public static int ilogbf(float x) {
+        return ilogb(x);
+    }
+
+    /** {@code float logbf(float x)}：二进制指数（float）。 */
+    public static float logbf(float x) {
+        return (float) logb(x);
+    }
+
+    /** {@code float scalblnf(float x, long n)}：{@code x * 2^n}（float，long 指数）。 */
+    public static float scalblnf(float x, long n) {
+        return (float) scalbln(x, n);
+    }
+
+    /** {@code float exp10f(float x)}：10 的 {@code x} 次幂（float）。 */
+    public static float exp10f(float x) {
+        return (float) exp10(x);
+    }
+
+    /** {@code float nanf(const char *s)}：安静 NaN（float）。 */
+    public static float nanf(String s) {
+        return Float.NaN;
+    }
+
+    /** {@code float nextupf(float x)}：紧邻 {@code x} 的上一个 float 值。 */
+    public static float nextupf(float x) {
+        return Math.nextUp(x);
+    }
+
+    /** {@code float nextdownf(float x)}：紧邻 {@code x} 的下一个 float 值。 */
+    public static float nextdownf(float x) {
+        return Math.nextDown(x);
+    }
+
+    /** {@code float frexpf(float x, int *exp)}：分解尾数与指数（float），返回
+     * {@link Frexp}。 */
+    public static Frexp frexpf(float x) {
+        Frexp f = frexp(x);
+        return new Frexp((float) f.mantissa, f.exp);
+    }
+
+    /** {@code float modff(float x, float *iptr)}：拆分小数与整数部分（float），返回
+     * {@link Modf}。 */
+    public static Modf modff(float x) {
+        Modf m = modf(x);
+        return new Modf((float) m.frac, (float) m.integral);
+    }
+
+    /** {@code float remquof(float x, float y, int *quo)}：IEEE 754 余数与商的低 3 位
+     * （float），返回 {@link Remquo}。 */
+    public static Remquo remquof(float x, float y) {
+        Remquo r = remquo(x, y);
+        return new Remquo((float) r.rem, r.quo);
+    }
 }

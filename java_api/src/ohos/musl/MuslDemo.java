@@ -16,10 +16,13 @@
 package ohos.musl;
 
 import ohos.musl.ctype.CtypeFuncs;
+import ohos.musl.inttypes.InttypesFuncs;
 import ohos.musl.math.MathFuncs;
+import ohos.musl.misc.MiscFuncs;
 import ohos.musl.stdlib.StdlibFuncs;
 import ohos.musl.string.StringFuncs;
 import ohos.musl.wchar.WcharFuncs;
+import ohos.musl.wctype.WctypeFuncs;
 
 /**
  * 演示 30 个 C 接口的 Java 版本（节选）。独立于现有编译流程：
@@ -77,6 +80,20 @@ public final class MuslDemo {
         // string.h GNU 扩展
         System.out.println("strverscmp(\"file10\",\"file2\") = "
                 + StringFuncs.strverscmp("file10", "file2"));
+
+        // strings.h / inttypes.h
+        System.out.println("ffsl(0x10L)                = " + MiscFuncs.ffsl(0x10L));
+        System.out.println("imaxdiv(-5L,2)             = quot " + InttypesFuncs.imaxdiv(-5L, 2).quot
+                + ", rem " + InttypesFuncs.imaxdiv(-5L, 2).rem);
+
+        // math.h 特殊函数 / 分类
+        System.out.println("erf(1.0)                   = " + MathFuncs.erf(1.0));
+        System.out.println("tgamma(5.0)                = " + MathFuncs.tgamma(5.0));
+        System.out.println("fpclassify(-0.0)           = " + MathFuncs.fpclassify(-0.0));
+
+        // wctype.h
+        System.out.println("iswctype('A', wctype(\"upper\")) = "
+                + WctypeFuncs.iswctype('A', WctypeFuncs.wctype("upper")));
 
         // ctype.h
         System.out.println("isdigit('7')             = " + CtypeFuncs.isdigit('7'));

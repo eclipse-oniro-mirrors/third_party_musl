@@ -364,6 +364,164 @@ public final class MathFuncsTest {
         Assert.assertTrue(!MathFuncs.signbit(0.0), "signbit(+0) false");
     }
 
+    private static void testCompareMacros() {
+        Assert.assertTrue(MathFuncs.isgreater(3.0, 2.0), "isgreater(3,2)");
+        Assert.assertTrue(!MathFuncs.isgreater(2.0, 3.0), "isgreater(2,3) false");
+        Assert.assertTrue(!MathFuncs.isgreater(Double.NaN, 2.0), "isgreater(NaN,2) false");
+        Assert.assertTrue(MathFuncs.isgreaterequal(3.0, 3.0), "isgreaterequal(3,3)");
+        Assert.assertTrue(!MathFuncs.isgreaterequal(2.0, 3.0), "isgreaterequal(2,3) false");
+        Assert.assertTrue(MathFuncs.isless(2.0, 3.0), "isless(2,3)");
+        Assert.assertTrue(!MathFuncs.isless(Double.NaN, 3.0), "isless(NaN,3) false");
+        Assert.assertTrue(MathFuncs.islessequal(2.0, 2.0), "islessequal(2,2)");
+        Assert.assertTrue(MathFuncs.islessgreater(2.0, 3.0), "islessgreater(2,3)");
+        Assert.assertTrue(!MathFuncs.islessgreater(2.0, 2.0), "islessgreater(2,2) false");
+        Assert.assertTrue(!MathFuncs.islessgreater(Double.NaN, 2.0), "islessgreater(NaN,2) false");
+        Assert.assertTrue(MathFuncs.isunordered(Double.NaN, 2.0), "isunordered(NaN,2)");
+        Assert.assertTrue(MathFuncs.isunordered(2.0, Double.NaN), "isunordered(2,NaN)");
+        Assert.assertTrue(!MathFuncs.isunordered(2.0, 3.0), "isunordered(2,3) false");
+
+        Assert.assertEquals(MathFuncs.FP_NAN, MathFuncs.fpclassify(Double.NaN), "fpclassify NaN");
+        Assert.assertEquals(MathFuncs.FP_INFINITE, MathFuncs.fpclassify(Double.POSITIVE_INFINITY),
+                "fpclassify inf");
+        Assert.assertEquals(MathFuncs.FP_ZERO, MathFuncs.fpclassify(0.0), "fpclassify 0");
+        Assert.assertEquals(MathFuncs.FP_ZERO, MathFuncs.fpclassify(-0.0), "fpclassify -0");
+        Assert.assertEquals(MathFuncs.FP_SUBNORMAL, MathFuncs.fpclassify(Double.MIN_VALUE),
+                "fpclassify subnormal");
+        Assert.assertEquals(MathFuncs.FP_NORMAL, MathFuncs.fpclassify(1.0), "fpclassify normal");
+    }
+
+    private static void testScalblnNanRemquoExp10() {
+        Assert.assertEquals(1024.0, MathFuncs.scalbln(1.0, 10), EPS, "scalbln(1,10)");
+        Assert.assertEquals(0.5, MathFuncs.scalbln(1.0, -1), EPS, "scalbln(1,-1)");
+        Assert.assertIsNaN(MathFuncs.nan(""), "nan(\"\")");
+        Assert.assertEquals(100.0, MathFuncs.exp10(2.0), EPS, "exp10(2)");
+        Assert.assertEquals(0.001, MathFuncs.exp10(-3.0), EPS, "exp10(-3)");
+
+        MathFuncs.Remquo r = MathFuncs.remquo(5.0, 2.0);
+        Assert.assertEquals(1.0, r.rem, EPS, "remquo(5,2).rem");
+        Assert.assertEquals(2, r.quo, "remquo(5,2).quo");
+        r = MathFuncs.remquo(3.0, 2.0);
+        Assert.assertEquals(-1.0, r.rem, EPS, "remquo(3,2).rem");
+        Assert.assertEquals(2, r.quo, "remquo(3,2).quo");
+    }
+
+    private static void testFloatVariants() {
+        Assert.assertEquals(2.0f, MathFuncs.sqrtf(4.0f), 1e-6f, "sqrtf(4)");
+        Assert.assertEquals(1024.0f, MathFuncs.powf(2.0f, 10.0f), 1e-3f, "powf(2,10)");
+        Assert.assertEquals(3.5f, MathFuncs.fabsf(-3.5f), 1e-6f, "fabsf(-3.5)");
+        Assert.assertEquals(3.0f, MathFuncs.floorf(3.7f), 1e-6f, "floorf(3.7)");
+        Assert.assertEquals(3.0f, MathFuncs.ceilf(2.1f), 1e-6f, "ceilf(2.1)");
+        Assert.assertEquals(1.0f, MathFuncs.fmodf(5.0f, 2.0f), 1e-6f, "fmodf(5,2)");
+        Assert.assertEquals(2.0f, MathFuncs.fminf(2.0f, 5.0f), 1e-6f, "fminf(2,5)");
+        Assert.assertEquals(5.0f, MathFuncs.fmaxf(2.0f, 5.0f), 1e-6f, "fmaxf(2,5)");
+        Assert.assertEquals(-3.0f, MathFuncs.copysignf(3.0f, -2.0f), 1e-6f, "copysignf(3,-2)");
+        Assert.assertEquals(5.0f, MathFuncs.hypotf(3.0f, 4.0f), 1e-6f, "hypotf(3,4)");
+        Assert.assertEquals(3.0f, MathFuncs.cbrtf(27.0f), 1e-6f, "cbrtf(27)");
+        Assert.assertEquals(3.0f, MathFuncs.roundf(2.5f), 1e-6f, "roundf(2.5)");
+        Assert.assertEquals(3.0f, MathFuncs.truncf(3.7f), 1e-6f, "truncf(3.7)");
+        Assert.assertEquals(Math.E, MathFuncs.expf(1.0f), 1e-6f, "expf(1)");
+        Assert.assertEquals(4.0f, MathFuncs.exp2f(2.0f), 1e-6f, "exp2f(2)");
+        Assert.assertEquals(0.0f, MathFuncs.expm1f(0.0f), 1e-6f, "expm1f(0)");
+        Assert.assertEquals(1.0f, MathFuncs.logf((float) Math.E), 1e-6f, "logf(e)");
+        Assert.assertEquals(3.0f, MathFuncs.log2f(8.0f), 1e-6f, "log2f(8)");
+        Assert.assertEquals(3.0f, MathFuncs.log10f(1000.0f), 1e-6f, "log10f(1000)");
+        Assert.assertEquals(0.0f, MathFuncs.log1pf(0.0f), 1e-6f, "log1pf(0)");
+        Assert.assertEquals(0.0f, MathFuncs.sinf(0.0f), 1e-6f, "sinf(0)");
+        Assert.assertEquals(1.0f, MathFuncs.cosf(0.0f), 1e-6f, "cosf(0)");
+        Assert.assertEquals(0.0f, MathFuncs.tanf(0.0f), 1e-6f, "tanf(0)");
+        Assert.assertEquals(0.0f, MathFuncs.sinhf(0.0f), 1e-6f, "sinhf(0)");
+        Assert.assertEquals(1.0f, MathFuncs.coshf(0.0f), 1e-6f, "coshf(0)");
+        Assert.assertEquals(0.0f, MathFuncs.tanhf(0.0f), 1e-6f, "tanhf(0)");
+        Assert.assertEquals(Math.PI / 2, MathFuncs.asinf(1.0f), 1e-6f, "asinf(1)");
+        Assert.assertEquals(0.0f, MathFuncs.acosf(1.0f), 1e-6f, "acosf(1)");
+        Assert.assertEquals(0.0f, MathFuncs.atanf(0.0f), 1e-6f, "atanf(0)");
+        Assert.assertEquals(Math.PI / 4, MathFuncs.atan2f(1.0f, 1.0f), 1e-6f, "atan2f(1,1)");
+        Assert.assertEquals(2.0f, MathFuncs.rintf(2.5f), 1e-6f, "rintf(2.5)");
+        Assert.assertEquals(1.0f, MathFuncs.fdimf(3.0f, 2.0f), 1e-6f, "fdimf(3,2)");
+        Assert.assertEquals(0.0f, MathFuncs.fdimf(2.0f, 3.0f), 1e-6f, "fdimf(2,3)");
+        Assert.assertEquals(Math.nextUp(1.0f), MathFuncs.nextafterf(1.0f, 2.0f), 0.0f,
+                "nextafterf(1,2)");
+        Assert.assertEquals(1.0f, MathFuncs.remainderf(5.0f, 2.0f), 1e-6f, "remainderf(5,2)");
+        Assert.assertEquals(10.0f, MathFuncs.fmaf(2.0f, 3.0f, 4.0f), 1e-6f, "fmaf(2,3,4)");
+        Assert.assertEquals(1024.0f, MathFuncs.scalbnf(1.0f, 10), 1e-6f, "scalbnf(1,10)");
+        Assert.assertEquals(0.5f, MathFuncs.ldexpf(1.0f, -1), 1e-6f, "ldexpf(1,-1)");
+        Assert.assertEquals(2.0f, MathFuncs.nearbyintf(2.5f), 1e-6f, "nearbyintf(2.5)");
+        Assert.assertEquals(1, MathFuncs.ilogbf(2.0f), "ilogbf(2)");
+        Assert.assertEquals(Integer.MIN_VALUE, MathFuncs.ilogbf(0.0f), "ilogbf(0)");
+        Assert.assertEquals(3.0f, MathFuncs.logbf(8.0f), 1e-6f, "logbf(8)");
+        Assert.assertEquals(1024.0f, MathFuncs.scalblnf(1.0f, 10), 1e-6f, "scalblnf(1,10)");
+        Assert.assertEquals(100.0f, MathFuncs.exp10f(2.0f), 1e-5f, "exp10f(2)");
+        Assert.assertIsNaN(MathFuncs.nanf(""), "nanf(\"\")");
+        Assert.assertEquals(Math.nextUp(1.0f), MathFuncs.nextupf(1.0f), 0.0f, "nextupf(1)");
+        Assert.assertEquals(Math.nextDown(1.0f), MathFuncs.nextdownf(1.0f), 0.0f, "nextdownf(1)");
+
+        MathFuncs.Frexp f = MathFuncs.frexpf(8.0f);
+        Assert.assertEquals(0.5f, f.mantissa, 1e-6f, "frexpf(8).mantissa");
+        Assert.assertEquals(4, f.exp, "frexpf(8).exp");
+        MathFuncs.Modf m = MathFuncs.modff(3.7f);
+        Assert.assertEquals(3.0f, m.integral, 1e-6f, "modff(3.7).integral");
+        MathFuncs.Remquo r = MathFuncs.remquof(5.0f, 2.0f);
+        Assert.assertEquals(1.0f, r.rem, 1e-6f, "remquof(5,2).rem");
+        Assert.assertEquals(2, r.quo, "remquof(5,2).quo");
+        Assert.assertEquals(2.0, MathFuncs.nearbyint(2.5), EPS, "nearbyint(2.5)");
+    }
+
+    private static void testFrexpRoundTrip() {
+        java.util.Random rnd = new java.util.Random(20261123);
+        for (int t = 0; t < 500; t++) {
+            double x = Math.scalb(rnd.nextDouble() * 2.0 - 1.0, rnd.nextInt(200) - 100);
+            if (x == 0.0) {
+                x = 1.0;
+            }
+            MathFuncs.Frexp f = MathFuncs.frexp(x);
+            double back = MathFuncs.ldexp(f.mantissa, f.exp);
+            Assert.assertEquals(1.0, back / x, 1e-12, "frexp roundtrip");
+        }
+    }
+
+    private static void testModfRoundTrip() {
+        java.util.Random rnd = new java.util.Random(20261125);
+        for (int t = 0; t < 500; t++) {
+            double x = Math.scalb(rnd.nextDouble() * 200.0 - 100.0, rnd.nextInt(40) - 20);
+            MathFuncs.Modf m = MathFuncs.modf(x);
+            Assert.assertEquals(x, m.frac + m.integral, 1e-9, "modf roundtrip");
+            Assert.assertEquals(MathFuncs.trunc(x), m.integral, 1e-9, "modf integral == trunc");
+        }
+    }
+
+    private static void testSpecialFunctions() {
+        Assert.assertEquals(0.0, MathFuncs.erf(0.0), EPS, "erf(0)");
+        Assert.assertEquals(0.8427007929497149, MathFuncs.erf(1.0), 1e-6, "erf(1)");
+        Assert.assertEquals(0.9953222650189527, MathFuncs.erf(2.0), 1e-6, "erf(2)");
+        Assert.assertEquals(-MathFuncs.erf(1.0), MathFuncs.erf(-1.0), EPS, "erf(-1) odd");
+        Assert.assertEquals(1.0, MathFuncs.erf(Double.POSITIVE_INFINITY), EPS, "erf(inf)");
+        Assert.assertIsNaN(MathFuncs.erf(Double.NaN), "erf(NaN)");
+
+        Assert.assertEquals(1.0, MathFuncs.erfc(0.0), EPS, "erfc(0)");
+        Assert.assertEquals(0.15729920705028513, MathFuncs.erfc(1.0), 1e-6, "erfc(1)");
+        Assert.assertEquals(0.004677734981047266, MathFuncs.erfc(2.0), 1e-6, "erfc(2)");
+        Assert.assertEquals(2.0, MathFuncs.erfc(Double.NEGATIVE_INFINITY), EPS, "erfc(-inf)");
+
+        Assert.assertEquals(1.0, MathFuncs.tgamma(1.0), 1e-6, "tgamma(1)");
+        Assert.assertEquals(1.0, MathFuncs.tgamma(2.0), 1e-6, "tgamma(2)");
+        Assert.assertEquals(24.0, MathFuncs.tgamma(5.0), 1e-5, "tgamma(5)");
+        Assert.assertEquals(Math.sqrt(Math.PI), MathFuncs.tgamma(0.5), 1e-6, "tgamma(0.5)");
+        Assert.assertEquals(-2.0 * Math.sqrt(Math.PI), MathFuncs.tgamma(-0.5), 1e-6, "tgamma(-0.5)");
+        Assert.assertEquals(Double.POSITIVE_INFINITY, MathFuncs.tgamma(0.0), EPS, "tgamma(+0)");
+        Assert.assertIsNaN(MathFuncs.tgamma(-1.0), "tgamma(-1) pole");
+
+        Assert.assertEquals(0.0, MathFuncs.lgamma(1.0), 1e-6, "lgamma(1)");
+        Assert.assertEquals(0.0, MathFuncs.lgamma(2.0), 1e-6, "lgamma(2)");
+        Assert.assertEquals(Math.log(24.0), MathFuncs.lgamma(5.0), 1e-5, "lgamma(5)");
+        Assert.assertEquals(Math.log(Math.sqrt(Math.PI)), MathFuncs.lgamma(0.5), 1e-6, "lgamma(0.5)");
+        Assert.assertEquals(Double.POSITIVE_INFINITY, MathFuncs.lgamma(0.0), EPS, "lgamma(0)");
+
+        Assert.assertEquals((float) MathFuncs.erf(1.0), MathFuncs.erff(1.0f), 1e-6f, "erff(1)");
+        Assert.assertEquals((float) MathFuncs.erfc(1.0), MathFuncs.erfcf(1.0f), 1e-6f, "erfcf(1)");
+        Assert.assertEquals(24.0f, MathFuncs.tgammaf(5.0f), 1e-3f, "tgammaf(5)");
+        Assert.assertEquals((float) Math.log(24.0), MathFuncs.lgammaf(5.0f), 1e-4f, "lgammaf(5)");
+    }
+
     public static int run() {
         failures = 0;
         System.out.println("== MathFuncsTest ==");
@@ -390,6 +548,12 @@ public final class MathFuncsTest {
         check(MathFuncsTest::testRintRoundL);
         check(MathFuncsTest::testFrexpLdexpModf);
         check(MathFuncsTest::testPredicates);
+        check(MathFuncsTest::testCompareMacros);
+        check(MathFuncsTest::testScalblnNanRemquoExp10);
+        check(MathFuncsTest::testFloatVariants);
+        check(MathFuncsTest::testSpecialFunctions);
+        check(MathFuncsTest::testFrexpRoundTrip);
+        check(MathFuncsTest::testModfRoundTrip);
         System.out.println("  " + (failures == 0 ? "PASS" : failures + " FAILURE(S)"));
         return failures;
     }
