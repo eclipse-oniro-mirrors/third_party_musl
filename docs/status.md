@@ -10,7 +10,7 @@ https://gitcode.com/openharmony/interface_sdk_c/blob/master/third_party/musl/ndk
 ## 系统侧libc新的变化
 2026/11/11 导出接口（无公共头文件声明）
 新增以下接口专为musl_extended_function为true设计使用：
-- 新增`dlopen_enable_relative_path`: 进程级开启显式相对路径 dlopen；按 CWD 打开后经 `/proc/self/fd` 解析真实路径并做命名空间权限校验；开关不可关闭；仅随 `musl_extended_function=true` 的 L2 Linux 构建编译，未启用扩展功能时不编译、不导出
+- 新增`dlopen_enable_relative_path`: 进程级开启显式相对路径 dlopen；按 CWD 打开后经 `/proc/self/fd` 解析真实路径并做命名空间权限校验；开关不可关闭；特性仅随 `musl_extended_function=true` 的 L2 Linux 构建编译，未启用扩展功能时符号仍导出，调用为空操作、无副作用
 
 2026/11/6 <stdlib.h>
 - 新增`initstate_r`: 使用指定种子和调用者提供的状态缓冲区初始化可重入伪随机数生成器

@@ -358,14 +358,14 @@ void dlopen_config_abs_path_policy(bool flag)
 	pthread_rwlock_unlock(&lock);
 }
 
-#ifdef ENABLE_DLOPEN_RELATIVE_PATH
 void dlopen_enable_relative_path(void)
 {
+#ifdef ENABLE_DLOPEN_RELATIVE_PATH
 	pthread_rwlock_wrlock(&lock);
 	g_relative_path_enabled = true;
 	pthread_rwlock_unlock(&lock);
-}
 #endif
+}
 
 __attribute__((always_inline))
 static bool check_acceptable(ns_inherit *inherit, const char *lib_name)

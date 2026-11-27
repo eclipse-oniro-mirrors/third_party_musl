@@ -33,7 +33,16 @@
 - M5 是核心约束：相对路径的真实文件即使在允许范围内，开关关闭时也必须拒绝；
 - 开关只影响含 `/` 且不以 `/` 开头的路径，绝对路径和纯名称在开关两侧结果一致；
 - 纯名称的可加载范围按 namespace 搜索路径判定；
-- 特性与测试仅在 `musl_extended_function=true` 时编译；未启用时不编译该接口，也不构建本测试。
+- 特性代码仅在 `musl_extended_function=true` 时编译；矩阵测试在两种配置下都构建，
+  未启用时接口仍导出但为空操作，开启侧用例按拒绝预期执行。
+
+## 补充用例
+
+| 场景 | 用例 | 预期 |
+| --- | --- | --- |
+| 超长路径 | `PATH_MAX + 32` 的相对路径，`RTLD_NOW` | 拒绝，不崩溃 |
+| `RTLD_LAZY` | `./allowed/librelative_path_fixture.so`，`RTLD_LAZY` | 与 `RTLD_NOW` 一致 |
+| 非零 extinfo | `dlopen_ns_ext` / 库内 `dlopen_ext` 传入 `flag=0`、`relro_fd=-1` | 与零 extinfo 一致 |
 
 ## 判定
 
