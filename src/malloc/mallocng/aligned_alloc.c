@@ -3,7 +3,7 @@
 #include "meta.h"
 
 #ifdef USE_JEMALLOC
-extern void* je_memalign(size_t align, size_t len);
+extern void* oh_memalign(size_t align, size_t len);
 #endif
 
 #ifdef HOOK_ENABLE
@@ -13,7 +13,7 @@ void *aligned_alloc(size_t align, size_t len)
 #endif
 {
 #ifdef USE_JEMALLOC
-	return je_memalign(align, len);
+	return oh_memalign(align, len);
 #endif
 	if ((align & -align) != align) {
 		errno = EINVAL;

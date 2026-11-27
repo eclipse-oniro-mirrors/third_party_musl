@@ -9,7 +9,7 @@
 #include "fork_impl.h"
 
 #ifdef USE_JEMALLOC
-extern void* je_malloc(size_t size);
+extern void* oh_malloc(size_t size);
 #endif
 
 #define ALIGN 16
@@ -117,7 +117,7 @@ void *__libc_malloc(size_t n)
 static void *default_malloc(size_t n)
 {
 #ifdef USE_JEMALLOC
-	return je_malloc(n);
+	return oh_malloc(n);
 #endif
 	return __libc_malloc_impl(n);
 }

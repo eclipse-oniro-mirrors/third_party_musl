@@ -268,6 +268,10 @@ extern bool init_gwp_asan_by_libc(bool force_init);
 __attribute__((used, retain)) int __hwasan_check_enabled = 0;
 #endif
 
+#ifdef USE_JEMALLOC
+extern int init_malloc();
+#endif
+
 weak_alias(__init_array_start, __init_array_end);
 weak_alias(__fini_array_start, __fini_array_end);
 
@@ -5173,6 +5177,10 @@ void __dls3(size_t *sp, size_t *auxv, size_t *aux)
 
 	/* Activate error handler function */
 	error = error_impl;
+
+#ifdef USE_JEMALLOC
+	init_malloc();
+#endif
 
 #ifdef OHOS_ENABLE_PARAMETER
 	InitParameterClient();

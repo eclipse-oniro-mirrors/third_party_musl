@@ -12,13 +12,13 @@
 
 #ifdef USE_JEMALLOC
 #ifdef USE_JEMALLOC_DFX_INTF
-extern void je_malloc_disable();
-extern void je_malloc_enable();
-extern int je_iterate(uintptr_t base, size_t size,
+extern void oh_malloc_disable();
+extern void oh_malloc_enable();
+extern int oh_iterate(uintptr_t base, size_t size,
 	void (*callback)(uintptr_t ptr, size_t size, void* arg), void* arg);
-extern int je_mallopt(int param, int value);
+extern int oh_mallopt(int param, int value);
 #endif
-extern int je_malloc_check_from_ptr(void *ptr);
+extern int oh_malloc_check_from_ptr(void *ptr);
 #endif
 
 #ifdef MALLOC_SECURE_ALL
@@ -474,7 +474,7 @@ int is_allzero(void *p)
 int mallopt(int param, int value)
 {
 #ifdef USE_JEMALLOC_DFX_INTF
-	return je_mallopt(param, value);
+	return oh_mallopt(param, value);
 #endif
 	return 0;
 }
@@ -482,21 +482,21 @@ int mallopt(int param, int value)
 void malloc_disable(void)
 {
 #ifdef USE_JEMALLOC_DFX_INTF
-	je_malloc_disable();
+	oh_malloc_disable();
 #endif
 }
 
 void malloc_enable(void)
 {
 #ifdef USE_JEMALLOC_DFX_INTF
-	je_malloc_enable();
+	oh_malloc_enable();
 #endif
 }
 
 int malloc_iterate(void* base, size_t size, void (*callback)(void* base, size_t size, void* arg), void* arg)
 {
 #ifdef USE_JEMALLOC_DFX_INTF
-	return je_iterate(base, size, callback, arg);
+	return oh_iterate(base, size, callback, arg);
 #endif
 	return 0;
 }
@@ -520,7 +520,7 @@ ssize_t malloc_backtrace(void* pointer, uintptr_t* frames, size_t frame_count)
 int __malloc_check_from_ptr(void *ptr)
 {
 #ifdef USE_JEMALLOC
-	return je_malloc_check_from_ptr(ptr);
+	return oh_malloc_check_from_ptr(ptr);
 #endif
 	errno = ENOSYS;
 	return -1;

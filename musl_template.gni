@@ -569,6 +569,10 @@ template("static_and_shared_libs_template") {
       defines += [ "IO_GUARD_ENABLE" ]
     }
 
+    if (musl_use_jemalloc) {
+      defines += [ "USE_JEMALLOC" ]
+    }
+
     deps = porting_deps
     if (use_musl && !is_llvm_build) {
       defines += [ "OHOS_ENABLE_PARAMETER" ]
