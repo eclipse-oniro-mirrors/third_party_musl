@@ -13,10 +13,10 @@
 
 import("../../../test_template.gni")
 
-# Only L2 extended builds compile this feature. The OH Linux dynamic loader is
-# not linked into the Cortex-M or riscv32 libc variants.
+# The feature is compiled only for L2 extended builds, but the test runs in
+# both forms to cover the always-exported no-op symbol. The OH Linux dynamic
+# loader is not linked into the Cortex-M or riscv32 libc variants.
 relative_path_loader_supported = is_standard_system &&
-                                 musl_extended_function &&
                                  musl_target_os == "linux" &&
                                  musl_arch != "cortex_m" &&
                                  musl_arch != "riscv32"
@@ -32,7 +32,12 @@ if (relative_path_loader_supported) {
     subsystem_name = "musl"
     part_name = "libc-test"
     sources = [ "relative_path_test.c" ]
-    defines = [ "EXPECT_RELATIVE_PATH=1" ]
+    defines = []
+    if (musl_extended_function) {
+      defines += [ "EXPECT_RELATIVE_PATH=1" ]
+    } else {
+      defines += [ "EXPECT_RELATIVE_PATH=0" ]
+    }
     include_dirs = [
       "//${test_dir}/src/common",
       "//${musl_include_dir}",

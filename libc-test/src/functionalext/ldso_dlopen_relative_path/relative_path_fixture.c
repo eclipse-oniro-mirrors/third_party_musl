@@ -62,3 +62,10 @@ void *relative_path_open(const char *path, int mode, int extended)
     void *volatile handle = extended ? dlopen_ext(path, mode, &info) : dlopen(path, mode);
     return handle;
 }
+
+/* Pass caller-provided extinfo through dlopen_ext for extinfo coverage. */
+void *relative_path_open_ext_info(const char *path, int mode, const dl_extinfo *info)
+{
+    void *volatile handle = dlopen_ext(path, mode, info);
+    return handle;
+}

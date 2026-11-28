@@ -2,7 +2,8 @@
 
 对应需求 `20260811011432`。特性仅在 L2 标准系统（`is_standard_system=true`）且
 `musl_extended_function=true` 的 Linux 构建中编译；`musl_extended_function=false`
-时不编译该特性、不导出 `dlopen_enable_relative_path`，也不注册本测试组。
+时特性代码不编译，`dlopen_enable_relative_path` 符号仍导出但调用为空操作、无副作用，
+相对路径仍按默认策略拒绝。测试组在两种形态下都构建，未使能形态用于验证符号可解析且调用无效果。
 测试不添加公共头文件声明。接口说明见
 [DLOPEN_ENABLE_RELATIVE_PATH.md](../../../../docs/interface/dynlink/DLOPEN_ENABLE_RELATIVE_PATH.md)。
 
@@ -12,8 +13,11 @@
 | --- | --- |
 | `dlopen_relative_path_matrix` | 三维矩阵：绝对/相对/纯名称 × namespace 范围内/范围外 × 开关开/关，共 12 格；相对路径用冷加载验证首次加载、用符号链接验证按真实路径校验；每个用例执行四个公开入口 |
 
-矩阵设计见 [TEST_DESIGN.md](TEST_DESIGN.md)。并发与符号用例的源码保留在目录中，
-当前未注册构建目标，后续可恢复。
+矩阵设计见 [TEST_DESIGN.md](TEST_DESIGN.md)。未使能构建（`EXPECT_RELATIVE_PATH=0`）
+会通过 dlsym 校验符号可解析，并验证调用使能接口后相对路径仍被拒绝（no-op、无副作用）。
+补充回归：`PATH_MAX+32` 超长相对路径拒绝、`RTLD_LAZY` 加载、非零 `extinfo`
+经 `dlopen_ns_ext` 和库内 `dlopen_ext` 透传。
+并发与符号用例的源码保留在目录中，当前未注册构建目标，后续可恢复。
 
 矩阵测试通过 `dlopen_ns`、`dlopen_ns_ext` 和测试库内的 `dlopen`、`dlopen_ext`
 调用，覆盖四个公开入口。测试库内调用用于检查调用者命名空间选择。
@@ -48,16 +52,18 @@ ADLT 的 `fullname` 保留原始符号链接名称以查找子库。
 
 ## 构建
 
-在完整 OpenHarmony 源码根目录执行；测试随 `musl_extended_function=true` 的构建产物提供：
+在完整 OpenHarmony 源码根目录执行；分别使用 `musl_extended_function=true/false` 的构建产物：
 
 ```sh
 ./build.sh --product-name rk3568 --build-target musl_all --gn-args musl_extended_function=true
 ./build.sh --product-name rk3568 --build-target //third_party/musl/libc-test/src/functionalext/ldso_dlopen_relative_path:ldso_dlopen_relative_path_test --gn-args musl_extended_function=true
 ```
 
-`musl_extended_function=false` 时不编译该特性，也不注册本测试组。
+另一组将 `musl_extended_function` 改为 `false`。测试程序的 `EXPECT_RELATIVE_PATH`
+由相同 GN 参数生成（true 为 1，false 为 0），必须与运行设备的 libc 配置一致，
+不要在同一设备上混用两种配置的产物。
 
-该测试组在 `test_src_functionalext.gni` 中仅向 L2 且扩展功能开启的构建注册，
+该测试组在 `test_src_functionalext.gni` 中仅向 L2 注册，两种扩展功能配置都会构建，
 会进入 L2 的 `libctest` 构建。测试目录还检查 Linux 加载器是否存在；
 Cortex-M 和 riscv32 不生成这些测试目标。
 
@@ -74,8 +80,7 @@ Cortex-M 和 riscv32 不生成这些测试目标。
 矩阵程序接受测试库路径作为第一个参数。每次运行创建独立临时目录，正常结束时清理；
 前置条件缺失会返回非零状态，不会跳过后报告通过。
 
-正式产物应在扩展功能构建下检查动态导出；`musl_extended_function=false` 的构建
-不应存在该符号：
+正式产物应在使能/未使能两种构建下检查动态导出，两种形态均应包含该符号：
 
 ```sh
 llvm-readelf --dyn-syms libc.so | grep dlopen_enable_relative_path
@@ -92,7 +97,7 @@ llvm-readelf --dyn-syms libc.so | grep dlopen_enable_relative_path
   另验证 arm/aarch64 的 ASAN、aarch64/x86_64 的 TSAN、aarch64 的 HWASAN，
   以及 arm/aarch64/x86_64 的 `UNIT_TEST_STATIC + IO_GUARD_ENABLE` 条件编译，共 68 组通过。
   这些是条件编译检查，不代表 sanitizer 设备运行验证。
-- `musl_extended_function=true` 的目标文件含新符号并启用开关状态；`false` 配置不编译该特性。
+- 两种配置的目标文件均含新符号；`true` 配置启用开关状态，`false` 配置函数体为空操作。
   新增加载逻辑在宏关闭配置中不引入 `realpath` 引用。
   13 种架构的 26 组 extern 调用对象与 loader 对象可重定位链接通过，13 个测试动态库链接通过；
   这不等同于正式 libc.so 的动态导出验证。

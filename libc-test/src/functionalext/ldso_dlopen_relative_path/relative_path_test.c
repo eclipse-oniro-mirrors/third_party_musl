@@ -52,6 +52,7 @@ static Dl_namespace ns;
 static void *fixture_handle;
 static void (*enable_relative_path)(void);
 static void *(*fixture_open)(const char *, int, int);
+static void *(*fixture_open_ext_info)(const char *, int, const dl_extinfo *);
 
 static int make_path(char *out, const char *base, const char *leaf)
 {
@@ -195,6 +196,11 @@ static int setup(const char *source)
         t_error("resolve fixture entry point: %s\n", dlerror());
         return -1;
     }
+    fixture_open_ext_info = dlsym(fixture_handle, "relative_path_open_ext_info");
+    if (!fixture_open_ext_info) {
+        t_error("resolve fixture extinfo entry point: %s\n", dlerror());
+        return -1;
+    }
     if (chdir(root)) {
         t_error("chdir fixture directory: %s\n", strerror(errno));
         return -1;
@@ -222,10 +228,8 @@ static void *open_library(int api, const char *path, int mode)
 }
 
 /* Return a per-call result; worker threads never write the shared t_status. */
-static int verify_open(int api, const char *path, int mode, bool expected)
+static int verify_handle(void *handle, const char *path, bool expected)
 {
-    dlerror();
-    void *handle = open_library(api, path, mode);
     if (!handle) {
         const char *error = dlerror();
         return expected || !error || dlerror() != NULL;
@@ -255,6 +259,12 @@ static int verify_open(int api, const char *path, int mode, bool expected)
     return failed;
 }
 
+static int verify_open(int api, const char *path, int mode, bool expected)
+{
+    dlerror();
+    return verify_handle(open_library(api, path, mode), path, expected);
+}
+
 #ifndef RELATIVE_PATH_CONCURRENT
 static void check_path(const char *path, int mode, bool expected)
 {
@@ -263,6 +273,18 @@ static void check_path(const char *path, int mode, bool expected)
             t_error("api=%d path=%s mode=%d expected=%s\n", api, path ? path : "(null)", mode,
                     expected ? "success" : "failure");
         }
+    }
+}
+
+static void check_path_ext(const char *path, int mode, const dl_extinfo *info, bool expected)
+{
+    dlerror();
+    if (verify_handle(dlopen_ns_ext(&ns, path, mode, info), path, expected)) {
+        t_error("api=ns_ext path=%s mode=%d expected=%s\n", path, mode, expected ? "success" : "failure");
+    }
+    dlerror();
+    if (verify_handle(fixture_open_ext_info(path, mode, info), path, expected)) {
+        t_error("api=ext path=%s mode=%d expected=%s\n", path, mode, expected ? "success" : "failure");
     }
 }
 
@@ -293,6 +315,9 @@ static void check_matrix_switch_off(void)
 
 static void check_matrix_switch_on(void)
 {
+    char too_long[PATH_MAX + 32];
+    dl_extinfo info = {0};
+
     /* M2: absolute path inside the namespace range. */
     check_path(library, RTLD_NOW, true);
     /* M4: absolute path outside the range. */
@@ -302,6 +327,18 @@ static void check_matrix_switch_on(void)
     check_path("./allowed/" FIXTURE, RTLD_NOW, EXPECT_RELATIVE_PATH);
     check_path("allowed/" FIXTURE, RTLD_NOW, EXPECT_RELATIVE_PATH);
     check_path("./allowed/good.so", RTLD_NOW, EXPECT_RELATIVE_PATH);
+    /* RTLD_LAZY only delays symbol binding; path resolution is unchanged. */
+    check_path("./allowed/" FIXTURE, RTLD_LAZY, EXPECT_RELATIVE_PATH);
+    /* A relative path longer than PATH_MAX fails cleanly. */
+    memset(too_long, 'a', sizeof(too_long));
+    too_long[0] = '.';
+    too_long[1] = '/';
+    too_long[sizeof(too_long) - 1] = '\0';
+    check_path(too_long, RTLD_NOW, false);
+    /* Non-zero extinfo fields must not affect path resolution. flag stays 0
+     * so the relro and reserved-address paths are not invoked. */
+    info.relro_fd = -1;
+    check_path_ext("./allowed/" FIXTURE, RTLD_NOW, &info, EXPECT_RELATIVE_PATH);
     /* M8: relative path outside the range, including a link escaping it. */
     check_path("./blocked/" FIXTURE, RTLD_NOW, false);
     check_path("./allowed/escape.so", RTLD_NOW, false);
